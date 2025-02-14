@@ -192,3 +192,22 @@ table.wp-list-table {
 .crontrol-callout-foreground a.button.button-hero {
 	font-size: 1em;
 }
+
+@keyframes rotator {
+	from {
+		transform: rotate( 0deg );
+	}
+	to {
+		transform: rotate( 360deg );
+	}
+}
+
+.crontrol-rotating {
+	animation: rotator 3s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.crontrol-rotating {
+		animation: none;
+	}
+}
