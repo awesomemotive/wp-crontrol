@@ -2303,6 +2303,14 @@ function get_hook_callbacks( $name ) {
 					continue;
 				}
 
+				if ( 'Crontrol\\Pro\\Log->log_start()' === $callback['name'] ) {
+					continue;
+				}
+
+				if ( 'Crontrol\\Pro\\Log->log_end()' === $callback['name'] ) {
+					continue;
+				}
+
 				$actions[] = array(
 					'priority' => $priority,
 					'callback' => $callback,
