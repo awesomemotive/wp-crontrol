@@ -103,10 +103,14 @@ function filter_plugin_row_meta( array $plugin_meta, $plugin_file ) {
 		return $plugin_meta;
 	}
 
+	if ( defined( '\Crontrol\Pro\WP_CRONTROL_PRO_VERSION' ) || file_exists( WP_PLUGIN_DIR . '/wp-crontrol-pro/wp-crontrol-pro.php' ) ) {
+		return $plugin_meta;
+	}
+
 	$plugin_meta[] = sprintf(
 		'<a href="%1$s"><span class="dashicons dashicons-star-filled" aria-hidden="true" style="font-size:14px;line-height:1.3"></span>%2$s</a>',
-		'https://github.com/sponsors/johnbillion',
-		esc_html_x( 'Sponsor', 'verb', 'wp-crontrol' )
+		admin_url( 'tools.php?page=wp-crontrol-logs' ),
+		esc_html__( 'Upgrade to Pro', 'wp-crontrol' )
 	);
 
 	return $plugin_meta;
@@ -1024,6 +1028,13 @@ function action_admin_menu() {
 		'wp-crontrol',
 		__NAMESPACE__ . '\admin_manage_page'
 	);
+	$tabs[] = add_management_page(
+		esc_html__( 'Cron Logs', 'wp-crontrol' ),
+		esc_html__( 'Cron Logs', 'wp-crontrol' ),
+		'manage_options',
+		'wp-crontrol-logs',
+		__NAMESPACE__ . '\admin_logs_page'
+	);
 
 	foreach ( $tabs as $tab ) {
 		add_action( "load-{$tab}", __NAMESPACE__ . '\admin_help_tab' );
@@ -1114,6 +1125,11 @@ function plugin_action_links( $actions ) {
 			'<a href="%s">%s</a>',
 			esc_url( admin_url( 'options-general.php?page=wp-crontrol-schedules' ) ),
 			esc_html__( 'Schedules', 'wp-crontrol' )
+		),
+		'crontrol-logs' => sprintf(
+			'<a href="%s">%s</a>',
+			esc_url( admin_url( 'tools.php?page=wp-crontrol-logs' ) ),
+			esc_html__( 'Logs', 'wp-crontrol' )
 		),
 		'crontrol-help' => sprintf(
 			'<a href="%s">%s</a>',
@@ -2108,6 +2124,63 @@ function admin_manage_page() {
 }
 
 /**
+ * Displays the Cron Logs page for the plugin.
+ *
+ * @return void
+ */
+function admin_logs_page() {
+	$table = new Logs\Table();
+	$table->prepare_items();
+	$pro_installed = file_exists( WP_PLUGIN_DIR . '/wp-crontrol-pro/wp-crontrol-pro.php' );
+	?>
+	<div class="wrap">
+		<?php do_tabs(); ?>
+
+		<h1 class="wp-heading-inline"><?php esc_html_e( 'Cron Logs', 'wp-crontrol' ); ?></h1>
+
+		<hr class="wp-header-end">
+
+		<?php if ( $pro_installed ) { ?>
+			<div id="crontrol-pro-notice" class="notice notice-info">
+				<p>
+					<?php esc_html_e( 'Activate the WP Crontrol Pro plugin to access the cron event logs.', 'wp-crontrol' ); ?>
+				</p>
+			</div>
+		<?php } else { ?>
+
+			<div class="crontrol-callout-container">
+				<div class="crontrol-callout-background" aria-hidden="true">
+					<div class="table-responsive">
+						<?php $table->display(); ?>
+					</div>
+				</div>
+				<div class="crontrol-callout-foreground">
+					<div>
+						<div class="crontrol-logo" aria-hidden="true">
+							<img src="<?php echo esc_url( plugins_url( '.wordpress-org/icon.svg', PLUGIN_FILE ) ); ?>" alt="">
+						</div>
+						<h2><a href="https://wp-crontrol.com/pro/">Cron event logging is a brand new feature available in WP Crontrol Pro</a></h2>
+						<h3>You have no idea what the scheduled cron events on your site are doing.<br>WP Crontrol Pro will log them and show you.</h3>
+						<ul>
+							<li><span class="dashicons dashicons-yes" aria-hidden="true"></span> See when events run and monitor performance metrics</li>
+							<li><span class="dashicons dashicons-yes" aria-hidden="true"></span> Save hours or days of manual investigation</li>
+							<li><span class="dashicons dashicons-yes" aria-hidden="true"></span> Get alerted to warnings and errors</li>
+							<li><span class="dashicons dashicons-yes" aria-hidden="true"></span> Identify and debug events that miss their schedule</li>
+							<li><span class="dashicons dashicons-yes" aria-hidden="true"></span> Identify daily or weekly hotspots</li>
+						</ul>
+						<p>WP Crontrol Pro is a new add-on for WP Crontrol, with many more features planned for the future.</p>
+						<p class="crontrol-pro-go">
+							<a href="https://wp-crontrol.com/pro/" class="button button-primary button-hero">Get WP Crontrol Pro &rarr;</a>
+						</p>
+					</div>
+				</div>
+			</div>
+		<?php } ?>
+	</div>
+	<?php
+}
+
+/**
  * Get the states of the various cron-related tabs.
  *
  * @return array<string,bool> Array of states keyed by tab name.
@@ -2116,6 +2189,7 @@ function get_tab_states() {
 	$tabs = array(
 		'events'     => ( ! empty( $_GET['page'] ) && 'wp-crontrol' === $_GET['page'] && empty( $_GET['crontrol_action'] ) ),
 		'schedules'  => ( ! empty( $_GET['page'] ) && 'wp-crontrol-schedules' === $_GET['page'] ),
+		'logs'       => ( ! empty( $_GET['page'] ) && 'wp-crontrol-logs' === $_GET['page'] ),
 		'add-event'  => ( ! empty( $_GET['crontrol_action'] ) && 'new-cron' === $_GET['crontrol_action'] ),
 		'edit-event' => ( ! empty( $_GET['crontrol_action'] ) && 'edit-cron' === $_GET['crontrol_action'] ),
 	);
@@ -2144,6 +2218,10 @@ function do_tabs() {
 		'events'    => array(
 			'tools.php?page=wp-crontrol',
 			__( 'Cron Events', 'wp-crontrol' ),
+		),
+		'logs' => array(
+			'tools.php?page=wp-crontrol-logs',
+			__( 'Cron Logs', 'wp-crontrol' ),
 		),
 		'schedules' => array(
 			'options-general.php?page=wp-crontrol-schedules',
@@ -2452,23 +2530,55 @@ function enqueue_assets( $hook_suffix ) {
 		return;
 	}
 
+	$css_deps = [
+		'dashicons',
+	];
+	$js_deps = [];
+
+	$dismissed_wp_pointers = explode( ',', (string) get_user_meta( get_current_user_id(), 'dismissed_wp_pointers', true ) );
+	$show_pointers = [
+		'logs' => $tab['events'] && ! in_array( 'wp-crontrol-logs', $dismissed_wp_pointers, true ),
+	];
+	$vars = array(
+		'pointers' => [],
+	);
+
+	if ( array_filter( $show_pointers ) ) {
+		$css_deps[] = 'wp-pointer';
+		$js_deps[] = 'wp-pointer';
+	}
+
+	if ( $show_pointers['logs'] && ! defined( '\Crontrol\Pro\WP_CRONTROL_PRO_VERSION' ) ) {
+		$vars['pointers']['logs'] = [
+			'title' => esc_js( __( 'Cron event logs', 'wp-crontrol' ) ),
+			'lines' => array(
+				esc_js( sprintf(
+					/* translators: 1: Name of the add-on plugin. */
+					__( 'Cron events can now be logged with WP Crontrol Pro. ', 'wp-crontrol' ),
+					'WP Crontrol Pro'
+				) ),
+				sprintf(
+					'<a href="%s">%s</a>',
+					'tools.php?page=wp-crontrol-logs',
+					esc_js( __( 'More information on the Cron Logs tab.', 'wp-crontrol' ) ),
+				),
+			),
+		];
+	}
+
 	wp_enqueue_style(
 		'wp-crontrol',
 		plugin_dir_url( PLUGIN_FILE ) . 'css/wp-crontrol.css',
-		array(
-			'dashicons',
-		),
+		$css_deps,
 		WP_CRONTROL_VERSION
 	);
 	wp_enqueue_script(
 		'wp-crontrol',
 		plugin_dir_url( PLUGIN_FILE ) . 'js/wp-crontrol.js',
-		array(),
+		$js_deps,
 		WP_CRONTROL_VERSION,
 		true
 	);
-
-	$vars = array();
 
 	if ( ! empty( $tab['add-event'] ) || ! empty( $tab['edit-event'] ) ) {
 		if ( current_user_can_manage_php_cron_events() ) {

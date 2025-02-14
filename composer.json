@@ -86,6 +86,10 @@
 		{
 			"type": "github",
 			"url": "https://github.com/sponsors/johnbillion"
+		},
+		{
+			"type": "other",
+			"url": "https://wp-crontrol.com/pro/"
 		}
 	]
 }
