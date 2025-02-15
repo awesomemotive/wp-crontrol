@@ -2,7 +2,7 @@
 <ruleset name="WP Crontrol">
 
 	<config name="testVersion" value="7.4-"/>
-	<config name="minimum_wp_version" value="5.9"/>
+	<config name="minimum_wp_version" value="6.2"/>
 	<arg name="extensions" value="php"/>
 
 	<exclude-pattern>/.github/*</exclude-pattern>

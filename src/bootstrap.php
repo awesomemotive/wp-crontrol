@@ -1391,7 +1391,7 @@ function flush_status_cache() {
  * @return void
  */
 function show_cron_status() {
-	if ( ! empty( $_GET['crontrol_action'] ) ) {
+	if ( empty( $_GET['page'] ) || 'wp-crontrol' !== $_GET['page'] ) {
 		return;
 	}
 

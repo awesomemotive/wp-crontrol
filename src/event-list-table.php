@@ -428,7 +428,13 @@ class Table extends \WP_List_Table {
 
 		$links = array();
 
-		if ( ( 'crontrol_cron_job' !== $event->hook ) || ( self::$can_manage_php_crons && self::$php_crons_enabled ) ) {
+		// PHP cron events can be edited as long as they are enabled and the user has permission.
+		$can_edit = ( 'crontrol_cron_job' !== $event->hook ) || ( self::$can_manage_php_crons && self::$php_crons_enabled );
+
+		// The Action Scheduler runner cannot be edited because there's really no point in trying.
+		$can_edit = $can_edit && ( 'action_scheduler_run_queue' !== $event->hook );
+
+		if ( $can_edit ) {
 			$link = array(
 				'page'                  => 'wp-crontrol',
 				'crontrol_action'       => 'edit-cron',
@@ -690,6 +696,15 @@ class Table extends \WP_List_Table {
 
 			foreach ( $hook_callbacks as $callback ) {
 				$callbacks[] = \Crontrol\output_callback( $callback );
+			}
+
+			if ( $event->hook === 'action_scheduler_run_queue' ) {
+				$callbacks[] = '';
+				$callbacks[] = sprintf(
+					'<span class="status-crontrol-info"><span class="dashicons dashicons-info" aria-hidden="true"></span> <a href="%s">%s</a></span>',
+					admin_url( 'tools.php?page=action-scheduler' ),
+					esc_html__( 'View the scheduled actions here &raquo;', 'wp-crontrol' )
+				);
 			}
 
 			return implode( '<br>', $callbacks ); // WPCS:: XSS ok.
