@@ -498,6 +498,8 @@ class Table extends \WP_List_Table {
 			$links[] = "<a href='" . esc_url( $link ) . "'>" . esc_html__( 'Pause this hook', 'wp-crontrol' ) . '</a>';
 		}
 
+		$links = apply_filters( 'crontrol/event-actions', $links, $event );
+
 		// PHP cron events can be deleted even if they're disallowed, as long as the user has permission.
 		if ( ! in_array( $event->hook, self::$persistent_core_hooks, true ) && ( ( 'crontrol_cron_job' !== $event->hook ) || self::$can_manage_php_crons ) ) {
 			$link = array(
