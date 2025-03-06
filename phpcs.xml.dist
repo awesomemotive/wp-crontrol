@@ -37,6 +37,7 @@
 		<!-- Give me strength. -->
 		<exclude name="Universal.Arrays.DisallowShortArraySyntax.Found"/>
 		<exclude name="WordPress.PHP.YodaConditions.NotYoda"/>
+		<exclude name="Universal.Operators.DisallowShortTernary.Found"/>
 	</rule>
 
 	<!-- Ignore some rules for the tests -->

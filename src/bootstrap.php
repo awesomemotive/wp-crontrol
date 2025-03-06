@@ -1485,10 +1485,10 @@ function get_timezone_name() {
 		}
 
 		return sprintf(
-			'(%1$s) %2$s - %3$s',
-			$offset_string,
+			'%1$s - %2$s (%3$s)',
 			$name,
 			$location,
+			$offset_string,
 		);
 	} catch ( Exception $e ) {
 		return sprintf(
@@ -1580,14 +1580,45 @@ function show_cron_form( $editing ) {
 		}
 
 		if ( empty( $existing ) ) {
+			$search_url = add_query_arg(
+				array(
+					'page' => 'wp-crontrol',
+					's'    => rawurlencode( $edit_id ),
+				),
+				admin_url( 'tools.php' )
+			);
 			?>
-			<div id="crontrol-event-not-found" class="notice notice-error">
-				<?php
-				printf(
-					'<p>%1$s</p>',
-					esc_html__( 'The event you are trying to edit does not exist.', 'wp-crontrol' )
-				);
-				?>
+			<div id="crontrol_form" class="wrap narrow">
+				<?php do_tabs(); ?>
+
+				<div id="crontrol-event-not-found" class="notice notice-error">
+					<p>
+						<?php
+						printf(
+							/* translators: %s: The name of the cron event. */
+							esc_html__( 'The %s event you are trying to edit does not exist.', 'wp-crontrol' ),
+							'<b>' . esc_html( $edit_id ) . '</b>'
+						);
+						?>
+					</p>
+					<p>
+						<?php
+						echo wp_kses(
+							sprintf(
+								/* translators: 1: The time since the event was scheduled, 2: The URL to search for the event. */
+								__( 'The event probably ran %1$s ago. <a href="%2$s">Click here to see if it was rescheduled</a>.', 'wp-crontrol' ),
+								human_time_diff( intval( $_GET['crontrol_next_run_utc'] ), time() ),
+								esc_url( $search_url )
+							),
+							array(
+								'a' => array(
+									'href' => array(),
+								),
+							)
+						);
+						?>
+					</p>
+				</div>
 			</div>
 			<?php
 			return;
@@ -1596,6 +1627,7 @@ function show_cron_form( $editing ) {
 
 	$is_editing_php = ( $existing && 'crontrol_cron_job' === $existing['hookname'] );
 	$is_editing_url = ( $existing && 'crontrol_url_cron_job' === $existing['hookname'] );
+	$is_editing_protected_event = false;
 
 	if ( is_array( $existing ) ) {
 		$other_fields  = wp_nonce_field( "crontrol-edit-cron_{$existing['hookname']}_{$existing['sig']}_{$existing['next_run']}", '_wpnonce', true, false );
@@ -1619,6 +1651,7 @@ function show_cron_form( $editing ) {
 		$next_run_gmt  = gmdate( 'Y-m-d H:i:s', $existing['next_run'] );
 		$next_run_date_local = get_date_from_gmt( $next_run_gmt, 'Y-m-d' );
 		$next_run_time_local = get_date_from_gmt( $next_run_gmt, 'H:i:s' );
+		$is_editing_protected_event = in_array( $existing['hookname'], get_all_core_hooks(), true ) || str_starts_with( $existing['hookname'], 'crontrol' );
 	} else {
 		$other_fields = wp_nonce_field( 'crontrol-new-cron', '_wpnonce', true, false );
 		$existing     = array(
@@ -1832,12 +1865,21 @@ function show_cron_form( $editing ) {
 					?>
 					<tr class="crontrol-event-standard">
 						<th scope="row">
-							<label for="crontrol_hookname">
+							<?php if ( $is_editing_protected_event ) { ?>
 								<?php esc_html_e( 'Hook Name', 'wp-crontrol' ); ?>
-							</label>
+							<?php } else { ?>
+								<label for="crontrol_hookname">
+									<?php esc_html_e( 'Hook Name', 'wp-crontrol' ); ?>
+								</label>
+							<?php } ?>
 						</th>
 						<td>
-							<input type="text" autocorrect="off" autocapitalize="off" spellcheck="false" class="regular-text" id="crontrol_hookname" name="crontrol_hookname" value="<?php echo esc_attr( $existing['hookname'] ); ?>" required />
+							<?php if ( $is_editing_protected_event ) { ?>
+								<input type="hidden" name="crontrol_hookname" value="<?php echo esc_attr( $existing['hookname'] ); ?>" />
+								<?php echo esc_html( $existing['hookname'] ); ?>
+							<?php } else { ?>
+								<input type="text" autocorrect="off" autocapitalize="off" spellcheck="false" class="regular-text" id="crontrol_hookname" name="crontrol_hookname" value="<?php echo esc_attr( $existing['hookname'] ); ?>" required />
+							<?php } ?>
 							<?php do_action( 'crontrol/manage/hookname', $existing ); ?>
 						</td>
 					</tr>
@@ -2354,7 +2396,22 @@ function populate_callback( array $callback ) {
 		$callback['name'] = $class . $access . $callback['function'][1] . '()';
 	} elseif ( is_object( $callback['function'] ) ) {
 		if ( is_a( $callback['function'], 'Closure' ) ) {
-			$callback['name'] = 'Closure';
+			try {
+				$reflection = new \ReflectionFunction( $callback['function'] );
+				$file = str_replace( ABSPATH, '', $reflection->getFileName() ?: '' );
+				$line = $reflection->getStartLine();
+
+				$name = sprintf(
+					/* translators: A Closure is a type of PHP function. 1: File name, 2: Line number */
+					__( 'Closure in %1$s at line %2$d', 'wp-crontrol' ),
+					$file,
+					$line
+				);
+			} catch ( \ReflectionException $e ) {
+				$name = 'Closure';
+			}
+
+			$callback['name'] = $name;
 		} else {
 			$class = get_class( $callback['function'] );
 
