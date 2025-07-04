@@ -198,7 +198,7 @@ function action_handle_posts() {
 			return $event;
 		}, 99 );
 
-		$added = Event\add( $next_run_local, $cr->schedule, $cr->hookname, $args );
+		$added = Event\add( $next_run_local, $cr->schedule, $cr->hookname, array_values( $args ) );
 
 		$redirect = array(
 			'page'             => 'wp-crontrol',
@@ -412,7 +412,7 @@ function action_handle_posts() {
 			return $event;
 		}, 99 );
 
-		$added = Event\add( $next_run_local, $cr->schedule, $cr->hookname, $args );
+		$added = Event\add( $next_run_local, $cr->schedule, $cr->hookname, array_values( $args ) );
 
 		if ( is_wp_error( $added ) ) {
 			set_message( $added->get_error_message() );
@@ -464,7 +464,7 @@ function action_handle_posts() {
 			exit;
 		}
 
-		$next_run_local = ( 'custom' === $cr->next_run_date_local ) ? $cr->next_run_date_local_custom_date . ' ' . $cr->next_run_date_local_custom_time : $cr->next_run_date_local;
+		$next_run_local = $cr->next_run_date_local_custom_date . ' ' . $cr->next_run_date_local_custom_time;
 
 		/**
 		 * Modifies an event before it is scheduled.
@@ -1230,12 +1230,6 @@ function admin_options_page() {
 					<p><?php esc_html_e( 'Adding a new schedule allows you to schedule recurring events at the given interval.', 'wp-crontrol' ); ?></p>
 					<form method="post" action="options-general.php?page=wp-crontrol-schedules">
 						<div class="form-field form-required">
-							<label for="crontrol_schedule_internal_name">
-								<?php esc_html_e( 'Internal Name', 'wp-crontrol' ); ?>
-							</label>
-							<input type="text" value="" id="crontrol_schedule_internal_name" name="crontrol_schedule_internal_name" required/>
-						</div>
-						<div class="form-field form-required">
 							<label for="crontrol_schedule_interval">
 								<?php esc_html_e( 'Interval (seconds)', 'wp-crontrol' ); ?>
 							</label>
@@ -1246,6 +1240,12 @@ function admin_options_page() {
 								<?php esc_html_e( 'Display Name', 'wp-crontrol' ); ?>
 							</label>
 							<input type="text" value="" id="crontrol_schedule_display_name" name="crontrol_schedule_display_name" required/>
+						</div>
+						<div class="form-field form-required">
+							<label for="crontrol_schedule_internal_name">
+								<?php esc_html_e( 'Internal Name', 'wp-crontrol' ); ?>
+							</label>
+							<input type="text" value="" id="crontrol_schedule_internal_name" name="crontrol_schedule_internal_name" required/>
 						</div>
 						<p class="submit">
 							<input type="submit" class="button button-primary" value="<?php esc_attr_e( 'Add Cron Schedule', 'wp-crontrol' ); ?>" name="crontrol_new_schedule"/>
@@ -2645,6 +2645,11 @@ function enqueue_assets( $hook_suffix ) {
 		true
 	);
 
+	$vars = array(
+		'confirmDeleteEvent' => __( 'Are you sure you want to delete this event?', 'wp-crontrol' ),
+		'confirmDeleteHook' => __( 'Are you sure you want to delete all events with this hook?', 'wp-crontrol' ),
+	);
+
 	if ( ! empty( $tab['add-event'] ) || ! empty( $tab['edit-event'] ) ) {
 		if ( current_user_can_manage_php_cron_events() ) {
 			$settings = wp_enqueue_code_editor( array(
@@ -2679,7 +2684,7 @@ function filter_removable_query_args( array $args ) {
  * @return array<int,string> Array of hook names.
  */
 function get_persistent_core_hooks() {
-	return array(
+	$hooks = array(
 		'wp_update_plugins', // 2.7.0
 		'wp_update_themes', // 2.7.0
 		'wp_version_check', // 2.7.0
@@ -2691,8 +2696,13 @@ function get_persistent_core_hooks() {
 		'recovery_mode_clean_expired_keys', // 5.2.0
 		'wp_site_health_scheduled_check', // 5.4.0
 		'wp_https_detection', // 5.7.0
-		'wp_update_user_counts', // 6.0.0
 	);
+
+	if ( ! is_multisite() ) {
+		$hooks[] = 'wp_update_user_counts'; // 6.0.0
+	}
+
+	return $hooks;
 }
 
 /**
@@ -2701,7 +2711,7 @@ function get_persistent_core_hooks() {
  * @return array<int,string> Array of hook names.
  */
 function get_all_core_hooks() {
-	return array_merge(
+	$hooks = array_merge(
 		get_persistent_core_hooks(),
 		array(
 			'do_pings', // 2.1.0
@@ -2714,6 +2724,12 @@ function get_all_core_hooks() {
 			'wp_delete_temp_updater_backups', // 6.3.0
 		)
 	);
+
+	if ( is_multisite() ) {
+		$hooks[] = 'wp_update_user_counts'; // 6.0.0
+	}
+
+	return $hooks;
 }
 
 /**

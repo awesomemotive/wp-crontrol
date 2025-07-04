@@ -41,3 +41,4 @@ jobs:
       node: false
       php: ${{ matrix.php }}
       wp: 'nightly'
+      cache: false

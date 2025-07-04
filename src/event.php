@@ -541,12 +541,12 @@ function uasort_order_events( $a, $b ) {
 /**
  * Fetches the list of cron events from WordPress core.
  *
- * @return array<int,array<string,array<string,array<string,mixed[]>>>>
- * @phpstan-return array<int,array<string,array<string,array<string,array{
+ * @return array<int,array<string,array<string,mixed[]>>>
+ * @phpstan-return array<int,array<string,array<string,array{
  *     args: mixed[],
  *     schedule: string|false,
  *     interval?: int,
- * }>>>>
+ * }>>>
  */
 function get_core_cron_array() {
 	$crons = _get_cron_array();

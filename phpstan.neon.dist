@@ -7,14 +7,15 @@ parameters:
 	paths:
 		- wp-crontrol.php
 		- src/
-		# - tests/acceptance
 	scanDirectories:
 		- tests/_support/
 		- vendor/lucatume/wp-browser/src/includes/factory/
-	excludePaths:
-		analyse:
-			- tests/integration/Supports/
 	bootstrapFiles:
 		- tests/phpstan/stubs.php
 	dynamicConstantNames:
 		- CRONTROL_DISALLOW_PHP_EVENTS
+	ignoreErrors:
+		-
+			identifier: requireOnce.fileNotFound
+		-
+			message: '#^Call to function method_exists\(\) with ''\\\\QM_Util'' and ''populate_callback'' will always evaluate to true\.$#'

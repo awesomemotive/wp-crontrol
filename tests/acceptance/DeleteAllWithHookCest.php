@@ -17,6 +17,7 @@ class DeleteAllWithHookCest {
 		$row = $I->amWorkingWithACronEvent( 'example_hook', '[3]' );
 
 		$I->click( 'Delete all events with this hook (3)', $row );
+		$I->acceptPopup();
 		$I->seeAdminSuccessNotice( 'Deleted all example_hook cron events.' );
 
 		$I->dontSee( 'example_hook', '.crontrol-events' );
@@ -28,6 +29,7 @@ class DeleteAllWithHookCest {
 		$row = $I->amWorkingWithACronEvent( 'wp_scheduled_delete', '[3]' );
 
 		$I->click( 'Delete all events with this hook (4)', $row );
+		$I->acceptPopup();
 		$I->seeAdminSuccessNotice( 'Deleted all wp_scheduled_delete cron events.' );
 	}
 }

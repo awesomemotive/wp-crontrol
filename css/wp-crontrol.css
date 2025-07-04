@@ -36,11 +36,6 @@ table.wp-list-table {
 	border-color: #d63638;
 }
 
-.wp-list-table tr.crontrol-inactive th,
-.wp-list-table tr.crontrol-paused th {
-	border-color: #8c8f94;
-}
-
 .wp-list-table tr.crontrol-inactive .column-crontrol_next,
 .wp-list-table tr.crontrol-inactive .column-crontrol_schedule,
 .wp-list-table tr.crontrol-paused .column-crontrol_next,
@@ -98,6 +93,11 @@ table.wp-list-table {
 
 .form-field input[type="number"] {
 	width: 100px;
+}
+
+input[type="time"][step="1"] {
+	/* https://issues.chromium.org/issues/406424266 */
+	min-width: 8.5em;
 }
 
 .crontrol-edit-event-url .crontrol-event-standard,

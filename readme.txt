@@ -2,8 +2,8 @@
 
 Contributors: johnbillion, scompt
 Tags: cron, wp-cron, crontrol, debug, woocommerce
-Tested up to: 6.7
-Stable tag: 1.18.0
+Tested up to: 6.8
+Stable tag: 1.19.1
 License: GPL v2 or later
 Donate link: https://github.com/sponsors/johnbillion
 
@@ -33,9 +33,9 @@ WP Crontrol is aware of timezones, will alert you to events that have no actions
 
 ### For site owners
 
-WP Crontrol is an essential tool for owners of WordPress websites and WooCommerce stores to ensure that scheduled cron events run correctly and efficiently. By providing complete control over cron events, WP Crontrol helps you:
+Owners of WordPress websites and WooCommerce stores use WP Crontrol to ensure that scheduled cron events run correctly and efficiently. By providing complete control over cron events, WP Crontrol helps you:
 
-* **Improve reliability**: Quickly address missed or failed cron events, ensuring your website or WooCommerce store continues to function as expected.
+* **Improve reliability**: Address missed or failed cron events, ensuring your website or WooCommerce store continues to function as expected.
 * **Enhance security**: Monitor and control cron events to ensure automatic update checks are performed as they should.
 * **Simplify management**: Add, edit, delete, and pause cron events from a user-friendly interface, without needing to write any code.
 * **Gain insights**: Export cron event data for analysis or reporting.
@@ -44,12 +44,12 @@ WP Crontrol is an essential tool for owners of WordPress websites and WooCommerc
 
 ### For developers
 
-WP Crontrol is an invaluable tool for developers to streamline and debug their WordPress development process:
+Developers use WP Crontrol to streamline and debug their WordPress development process:
 
-* **Enhanced debugging**: Easily identify and troubleshoot issues with scheduled tasks, ensuring your scheduled events and their callbacks run as expected.
+* **Enhanced debugging**: Identify and troubleshoot issues with scheduled tasks, ensuring your scheduled events and their callbacks run as expected.
 * **Custom schedules**: Create and manage custom cron schedules to fit the specific needs of your website, plugins, or themes, providing greater flexibility than just the core schedules.
-* **Efficient workflow**: Quickly add, edit, and delete cron events directly from the WordPress admin interface, saving time and reducing the need for manual coding.
-* **Insightful monitoring**: Gain insights into the performance and behavior of your scheduled tasks, allowing for better optimization and resource management.
+* **Efficient workflow**: Add, edit, and delete cron events directly from the WordPress admin interface, saving time and reducing the need for manual coding.
+* **Insightful monitoring**: Get insight into the performance and behavior of your scheduled tasks, allowing for optimization and better resource management.
 * **Accurate debugging**: WP Crontrol goes to great lengths to ensure that running an event manually does so in a manner which exactly matches how WordPress core runs schdeuled events. This ensures that you can debug events accurately and with confidence.
 
 ### Other Plugins
@@ -111,17 +111,11 @@ Resuming an event re-enables all actions attached to the event's hook. All event
 
 This means the cron event is scheduled to run at the specified time but there is no corresponding functionality that will be triggered when the event runs, therefore the event is useless.
 
-This is often caused by plugins that don't clean up their cron events when you deactivate them. You can use your favourite search engine to search for the event name in order to find out which plugin it belongs to, and then decide whether or not to delete it.
+[You can read all about events with no action on the WP Crontrol website](https://wp-crontrol.com/help/no-action-cron-events/).
 
 ### How do I change the next run time or the schedule of a cron event?
 
 You can change the time and schedule of a cron event by clicking the "Edit" link next to the event.
-
-### How can I create a cron event that requests a URL?
-
-From the Tools → Cron Events menu, click on Add New Cron Event. Select the "URL cron event" option, fill out the details, and press the "Add Event" button.
-
-[You can read all about the features and security of URL cron events on the WP Crontrol website](https://wp-crontrol.com/docs/url-cron-events/).
 
 ### Why do changes that I make to some cron events not get saved?
 
@@ -167,9 +161,15 @@ function my_function() {
 }
 ~~~
 
+### How can I create a cron event that requests a URL?
+
+From the Tools → Cron Events menu, click on Add New Cron Event. Select the "URL cron event" option, fill out the details, and press the "Add Event" button.
+
+[You can read all about the features and security of URL cron events on the WP Crontrol website](https://wp-crontrol.com/docs/url-cron-events/).
+
 ### How do I create a new PHP cron event?
 
-From the Tools → Cron Events menu, click on "Add New Cron Event". Select the "PHP cron event" option and enter the schedule and next run time. The event schedule is how often your event will be executed. If you don't see a good interval, then add one in the Settings → Cron Schedules menu. In the "PHP Code" area, enter the PHP code that should be run when your cron event is executed. You don't need to provide the PHP opening tag (`<?php`).
+From the Tools → Cron Events menu, click on Add New Cron Event. Select the "PHP cron event" option and enter the schedule and next run time. The event schedule is how often your event will be executed. If you don't see a good interval, then add one in the Settings → Cron Schedules menu. In the "PHP Code" area, enter the PHP code that should be run when your cron event is executed. You don't need to provide the PHP opening tag (`<?php`).
 
 Creating, editing, and running PHP cron events is subject to restrictive security permissions. [You can read all about the features and security of PHP cron events on the WP Crontrol website](https://wp-crontrol.com/docs/php-cron-events/).
 
