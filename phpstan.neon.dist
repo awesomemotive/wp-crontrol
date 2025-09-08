@@ -7,6 +7,8 @@ parameters:
 	paths:
 		- wp-crontrol.php
 		- src/
+		- tests/acceptance/
+		- tests/integration/
 	scanDirectories:
 		- tests/_support/
 		- vendor/lucatume/wp-browser/src/includes/factory/
@@ -14,6 +16,8 @@ parameters:
 		- tests/phpstan/stubs.php
 	dynamicConstantNames:
 		- CRONTROL_DISALLOW_PHP_EVENTS
+	WPCompat:
+		pluginFile: wp-crontrol.php
 	ignoreErrors:
 		-
 			identifier: requireOnce.fileNotFound

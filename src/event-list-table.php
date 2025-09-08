@@ -354,11 +354,7 @@ class Table extends \WP_List_Table {
 	public function single_row( $event ) {
 		$classes = array();
 
-		if ( ( 'crontrol_cron_job' === $event->hook ) && isset( $event->args[0]['syntax_error_message'] ) ) {
-			$classes[] = 'crontrol-error';
-		}
-
-		if ( integrity_failed( $event ) ) {
+		if ( self::row_has_error( $event ) ) {
 			$classes[] = 'crontrol-error';
 		}
 
@@ -437,6 +433,7 @@ class Table extends \WP_List_Table {
 
 		// PHP cron events can be edited as long as they are enabled and the user has permission.
 		$can_edit = ( 'crontrol_cron_job' !== $event->hook ) || ( self::$can_manage_php_crons && self::$php_crons_enabled );
+		$has_error = self::row_has_error( $event );
 
 		if ( $can_edit ) {
 			$link = array(
@@ -462,9 +459,9 @@ class Table extends \WP_List_Table {
 		}
 
 		// PHP cron events can be run as long as they are enabled.
-		$can_run = ( 'crontrol_cron_job' !== $event->hook ) || self::$php_crons_enabled;
+		$can_run = ( ( 'crontrol_cron_job' !== $event->hook ) || self::$php_crons_enabled ) && ! $has_error;
 
-		if ( ! is_paused( $event ) && ! integrity_failed( $event ) && $can_run ) {
+		if ( ! is_paused( $event ) && $can_run ) {
 			$link = array(
 				'page'                  => 'wp-crontrol',
 				'crontrol_action'       => 'run-cron',
@@ -549,6 +546,21 @@ class Table extends \WP_List_Table {
 		}
 
 		return $this->row_actions( $links );
+	}
+
+	/**
+	 * @param stdClass $event The cron event for the current row.
+	 */
+	private static function row_has_error( $event ): bool {
+		if ( 'crontrol_cron_job' === $event->hook && isset( $event->args[0]['syntax_error_message'] ) ) {
+			return true;
+		}
+
+		if ( 'crontrol_url_cron_job' === $event->hook && isset( $event->args[0]['url_error_message'] ) ) {
+			return true;
+		}
+
+		return integrity_failed( $event );
 	}
 
 	/**
@@ -654,6 +666,12 @@ class Table extends \WP_List_Table {
 				$output = sprintf( esc_html__( 'URL cron event (%s)', 'wp-crontrol' ), $url );
 			} else {
 				$output = esc_html__( 'URL cron event', 'wp-crontrol' );
+			}
+
+			if ( isset( $event->args[0]['url_error_message'] ) ) {
+				$output .= '<br><span class="status-crontrol-error"><span class="dashicons dashicons-warning" aria-hidden="true"></span> ';
+				$output .= esc_html( $event->args[0]['url_error_message'] );
+				$output .= '</span>';
 			}
 
 			return $output;

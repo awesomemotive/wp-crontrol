@@ -1,13 +1,13 @@
 # yaml-language-server: $schema=https://json.schemastore.org/github-workflow
 
-name: Acceptance Tests
+name: Integration Tests
 on:
   push:
     branches:
       - 'develop'
       - 'trunk'
     paths:
-      - '.github/workflows/acceptance-tests.yml'
+      - '.github/workflows/integration-tests.yml'
       - 'tests/**'
       - '**.css'
       - '**.js'
@@ -15,11 +15,12 @@ on:
       - 'codeception.dist.yml'
       - 'composer.json'
       - 'docker-compose.yml'
+      - 'package.json'
   pull_request:
     branches:
       - '**'
     paths:
-      - '.github/workflows/acceptance-tests.yml'
+      - '.github/workflows/integration-tests.yml'
       - 'tests/**'
       - '**.css'
       - '**.js'
@@ -27,6 +28,7 @@ on:
       - 'codeception.dist.yml'
       - 'composer.json'
       - 'docker-compose.yml'
+      - 'package.json'
   workflow_dispatch:
 
 permissions: {}
@@ -36,27 +38,28 @@ jobs:
     name: WP ${{ matrix.wp }}
     permissions:
       contents: read
+    uses: johnbillion/plugin-infrastructure/.github/workflows/reusable-integration-tests.yml@33705f771525b0d691ee821c90e0c10b18e02871 # v1.2.1
     strategy:
       # See the following for PHP compatibility of WordPress versions:
       # https://make.wordpress.org/core/handbook/references/php-compatibility-and-wordpress-versions/
       matrix:
         wp:
-          # Latest three stable:
+          # Three most recent versions of WordPress
           - '6.8'
           - '6.7'
           - '6.6'
         php:
+          # Most recent version of PHP supported by all of the above, plus 7.4
           - '8.3'
           - '7.4'
         include:
-          # Latest stable on PHP 8.4:
+          # Latest WordPress on PHP 8.4
           - wp: '6.8'
             php: '8.4'
-          # Oldest supported on PHP 7.4:
+          # Oldest supported WordPress
           - wp: '6.3'
             php: '7.4'
       fail-fast: false
-    uses: johnbillion/plugin-infrastructure/.github/workflows/reusable-acceptance-tests.yml@33705f771525b0d691ee821c90e0c10b18e02871 # v1.2.1
     with:
       node: false
       php: ${{ matrix.php }}

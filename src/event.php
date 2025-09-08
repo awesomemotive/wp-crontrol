@@ -144,6 +144,7 @@ function add( $next_run_local, $schedule, $hook, array $args ) {
 	}
 
 	$next_run_utc = (int) get_gmt_from_date( gmdate( 'Y-m-d H:i:s', $next_run_local ), 'U' );
+	$error = null;
 
 	if ( 'crontrol_cron_job' === $hook && ! empty( $args[0]['code'] ) ) {
 		try {
@@ -163,6 +164,16 @@ function add( $next_run_local, $schedule, $hook, array $args ) {
 		} catch ( \ParseError $e ) {
 			$args[0]['syntax_error_message'] = $e->getMessage();
 			$args[0]['syntax_error_line'] = $e->getLine();
+			$error = $e;
+		}
+	}
+
+	if ( 'crontrol_url_cron_job' === $hook && ! empty( $args[0]['url'] ) ) {
+		try {
+			validate_url( $args[0]['url'] );
+		} catch ( \InvalidArgumentException $e ) {
+			$args[0]['url_error_message'] = $e->getMessage();
+			$error = $e;
 		}
 	}
 
@@ -176,7 +187,14 @@ function add( $next_run_local, $schedule, $hook, array $args ) {
 		return $result;
 	}
 
-	return true;
+	return ( $error instanceof \Throwable ) ? new WP_Error(
+		'has_error',
+		sprintf(
+			/* translators: %s: The error message. */
+			__( 'The cron event was saved but contains an error: %s.', 'wp-crontrol' ),
+			$error->getMessage(),
+		),
+	) : true;
 }
 
 /**
@@ -461,22 +479,22 @@ function integrity_failed( stdClass $event ): bool {
 }
 
 /**
- * Checks the integrity of a code string compared to its stored hash.
+ * Checks the integrity of a string compared to its stored hash.
  *
- * @param string|null $code        The code string.
+ * @param string|null $value       The string value.
  * @param string|null $stored_hash The stored HMAC of the code.
  * @return bool
  */
-function check_integrity( $code, $stored_hash ): bool {
-	// If there's no code or hash then the integrity check is not ok.
-	if ( empty( $code ) || empty( $stored_hash ) ) {
+function check_integrity( $value, $stored_hash ): bool {
+	// If there's no value or hash then the integrity check is not ok.
+	if ( empty( $value ) || empty( $stored_hash ) ) {
 		return false;
 	}
 
-	$code_hash = wp_hash( $code );
+	$value_hash = wp_hash( $value );
 
 	// If the hashes match then the integrity check is ok.
-	return hash_equals( $stored_hash, $code_hash );
+	return hash_equals( $stored_hash, $value_hash );
 }
 
 /**
@@ -556,4 +574,43 @@ function get_core_cron_array() {
 	}
 
 	return $crons;
+}
+
+/**
+ * Validates a URL for a cron event.
+ *
+ * @see https://github.com/WordPress/wordpress-develop/blob/197f0a71ad27d0688b6380c869aeaf92addd1451/src/wp-includes/class-wp-http.php#L283-L299
+ *
+ * @throws \InvalidArgumentException If the URL is not valid or contains an invalid protocol.
+ *
+ * @param string $url The URL to validate.
+ */
+function validate_url( string $url ): void {
+	$valid = wp_http_validate_url( $url );
+
+	if ( $valid === false ) {
+		throw new \InvalidArgumentException(
+			esc_html(
+				sprintf(
+					/* translators: %s: The URL that failed validation. */
+					__( 'The URL "%s" is not allowed', 'wp-crontrol' ),
+					$url,
+				)
+			)
+		);
+	}
+
+	$filtered = wp_kses_bad_protocol( $url, array( 'http', 'https', 'ssl' ) );
+
+	if ( $filtered === '' ) {
+		throw new \InvalidArgumentException(
+			esc_html(
+				sprintf(
+					/* translators: %s: The URL that failed validation. */
+					__( 'The URL "%s" contains an invalid protocol', 'wp-crontrol' ),
+					$url,
+				)
+			)
+		);
+	}
 }

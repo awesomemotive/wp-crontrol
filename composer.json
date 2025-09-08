@@ -26,12 +26,13 @@
 		}
 	},
 	"require-dev": {
+		"behat/gherkin": "< 4.13.0",
 		"codeception/module-asserts": "^1.0",
 		"codeception/module-db": "^1.0",
 		"codeception/module-webdriver": "^1.0",
 		"codeception/util-universalframework": "^1.0",
 		"dealerdirect/phpcodesniffer-composer-installer": "^0.7.0",
-		"johnbillion/plugin-infrastructure": "dev-trunk",
+		"johnbillion/plugin-infrastructure": "1.2.1",
 		"johnbillion/wp-compat": "^1.2",
 		"lucatume/wp-browser": "3.2.1",
 		"phpcompatibility/phpcompatibility-wp": "2.1.6",
@@ -50,6 +51,11 @@
 			"src"
 		]
 	},
+	"autoload-dev": {
+		"psr-4": {
+			"Crontrol\\Tests\\": "tests/integration"
+		}
+	},
 	"extra": {
 		"wordpress-install-dir": "vendor/wordpress/wordpress"
 	},
@@ -61,19 +67,29 @@
 			"@composer validate --strict --no-check-lock",
 			"@test:phpstan",
 			"@test:phpcs",
-			"tests-start",
+			"@test:start",
+			"@test:integration",
 			"@test:acceptance",
-			"tests-stop"
+			"@test:stop"
 		],
 		"test:acceptance": [
 			"acceptance-tests"
 		],
+		"test:integration": [
+			"integration-tests"
+		],
 		"test:phpcs": [
-			"phpcs -nps --colors --report-code --report-summary --report-width=80 --cache=tests/cache/phpcs.json --basepath=./ ."
+			"phpcs -nps --colors --report-code --report-summary --report-width=80 --basepath=./ ."
 		],
 		"test:phpstan": [
 			"codecept build #",
 			"phpstan analyze -v --memory-limit=1024M"
+		],
+		"test:start": [
+			"tests-start"
+		],
+		"test:stop": [
+			"tests-stop"
 		]
 	},
 	"support": {

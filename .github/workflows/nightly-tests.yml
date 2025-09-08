@@ -33,10 +33,31 @@ jobs:
         label:
           - 'acceptance'
         php:
+          # Newest and oldest supported versions of PHP
           - '8.3'
           - '7.4'
       fail-fast: false
-    uses: johnbillion/plugin-infrastructure/.github/workflows/reusable-acceptance-tests.yml@trunk
+    uses: johnbillion/plugin-infrastructure/.github/workflows/reusable-acceptance-tests.yml@33705f771525b0d691ee821c90e0c10b18e02871 # v1.2.1
+    with:
+      node: false
+      php: ${{ matrix.php }}
+      wp: 'nightly'
+      cache: false
+
+  integration:
+    name: Nightly ${{ matrix.label }}
+    permissions:
+      contents: read
+    uses: johnbillion/plugin-infrastructure/.github/workflows/reusable-integration-tests.yml@33705f771525b0d691ee821c90e0c10b18e02871 # v1.2.1
+    strategy:
+      matrix:
+        label:
+          - 'integration'
+        php:
+          # Newest and oldest supported versions of PHP
+          - '8.3'
+          - '7.4'
+      fail-fast: false
     with:
       node: false
       php: ${{ matrix.php }}

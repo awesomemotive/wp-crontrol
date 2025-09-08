@@ -7,14 +7,14 @@
  * Test class.
  */
 class DeleteAllWithHookCest {
-	public function _before( AcceptanceTester $I ) {
+	public function _before( AcceptanceTester $I ): void {
 		$I->loginAsAdmin();
 	}
 
-	public function DeletingAHook( AcceptanceTester $I ) {
-		$I->amWorkingWithACronEvent( 'example_hook', '[1]' );
-		$I->amWorkingWithACronEvent( 'example_hook', '[2]' );
-		$row = $I->amWorkingWithACronEvent( 'example_hook', '[3]' );
+	public function DeletingAHook( AcceptanceTester $I ): void {
+		$I->amWorkingWithANewCronEvent( 'example_hook', '[1]' );
+		$I->amWorkingWithANewCronEvent( 'example_hook', '[2]' );
+		$row = $I->amWorkingWithANewCronEvent( 'example_hook', '[3]' );
 
 		$I->click( 'Delete all events with this hook (3)', $row );
 		$I->acceptPopup();
@@ -23,10 +23,10 @@ class DeleteAllWithHookCest {
 		$I->dontSee( 'example_hook', '.crontrol-events' );
 	}
 
-	public function DeletingAPersistentWordPressCoreHook( AcceptanceTester $I ) {
-		$I->amWorkingWithACronEvent( 'wp_scheduled_delete', '[1]' );
-		$I->amWorkingWithACronEvent( 'wp_scheduled_delete', '[2]' );
-		$row = $I->amWorkingWithACronEvent( 'wp_scheduled_delete', '[3]' );
+	public function DeletingAPersistentWordPressCoreHook( AcceptanceTester $I ): void {
+		$I->amWorkingWithANewCronEvent( 'wp_scheduled_delete', '[1]' );
+		$I->amWorkingWithANewCronEvent( 'wp_scheduled_delete', '[2]' );
+		$row = $I->amWorkingWithANewCronEvent( 'wp_scheduled_delete', '[3]' );
 
 		$I->click( 'Delete all events with this hook (4)', $row );
 		$I->acceptPopup();

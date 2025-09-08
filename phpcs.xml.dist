@@ -4,6 +4,7 @@
 	<config name="testVersion" value="7.4-"/>
 	<config name="minimum_wp_version" value="6.3"/>
 	<arg name="extensions" value="php"/>
+	<arg name="cache" value="tests/cache/phpcs.json"/>
 
 	<exclude-pattern>/.github/*</exclude-pattern>
 	<exclude-pattern>/node_modules/*</exclude-pattern>

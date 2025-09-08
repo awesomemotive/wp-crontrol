@@ -14,7 +14,7 @@ jobs:
     name: Build
     permissions:
       contents: write
-    uses: johnbillion/plugin-infrastructure/.github/workflows/reusable-build.yml@trunk
+    uses: johnbillion/plugin-infrastructure/.github/workflows/reusable-build.yml@33705f771525b0d691ee821c90e0c10b18e02871 # v1.2.1
     with:
       node: false
       tag: ${{ github.event_name != 'workflow_dispatch' }}

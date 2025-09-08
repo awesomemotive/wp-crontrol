@@ -99,13 +99,25 @@ class AcceptanceTester extends \Codeception\Actor {
 	 * @param string $args     The event arguments encoded as JSON.
 	 * @return string
 	 */
-	public function amWorkingWithACronEvent( string $hook_name, string $args = '' ) {
+	public function amWorkingWithANewCronEvent( string $hook_name, string $args = '' ) {
 		$this->amOnCronEventListingPage();
 		$this->click( 'Add New Cron Event', '#wpbody' );
 		$this->fillField( 'Hook Name', $hook_name );
 		$this->fillField( 'Arguments (optional)', $args );
 		$this->selectOption( 'input[name="crontrol_next_run_date_local"]', 'Tomorrow' );
 		$this->click( 'Add Event' );
+
+		return Locator::contains( '.crontrol-events tr', $hook_name );
+	}
+
+	/**
+	 * Work with an existing cron event.
+	 *
+	 * @param string $hook_name The event hook name.
+	 * @return string
+	 */
+	public function amWorkingWithAnExistingCronEvent( string $hook_name ) {
+		$this->amOnCronEventListingPage();
 
 		return Locator::contains( '.crontrol-events tr', $hook_name );
 	}

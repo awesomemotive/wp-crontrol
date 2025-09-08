@@ -36,23 +36,27 @@ Install the PHP dependencies:
 
 ## Running the Tests
 
-The test suite includes acceptance tests which run in a Docker container. Ensure Docker Desktop is running, then start the containers with:
+The test suite includes acceptance tests which run in a Docker container. Ensure Docker Desktop is running before running the tests.
 
-	composer exec tests-start
-
-To run the whole test suite which includes acceptance tests, linting, and static analysis:
+To run the whole test suite which includes integration tests, acceptance tests, linting, and static analysis:
 
 	composer test
 
 To run tests individually, run one of:
 
-	composer test:acceptance
 	composer test:phpcs
 	composer test:phpstan
+	composer test:integration
+	composer test:acceptance
 
-To stop the Docker containers:
+To run individual tests:
 
-	composer exec tests-stop
+	composer test:acceptance -- --codecept-args="tests/acceptance/AddEventCest.php"
+
+The individual integration and acceptance tests require the Docker containers to be running. To start and stop them, use:
+
+	composer test:start
+	composer test:stop
 
 ## Releasing a New Version
 
