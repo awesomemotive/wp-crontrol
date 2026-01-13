@@ -101,20 +101,22 @@ class Request {
 	public $original_next_run_utc = '';
 
 	/**
-	 * Crontrol_Request constructor.
+	 * Initializes a Request object from properties.
 	 *
 	 * @param array<string,mixed> $props Properties.
-	 * @return Request This object.
+	 * @return Request A new Request object.
 	 */
-	public function init( array $props ) {
+	public static function init( array $props ): Request {
+		$request = new self();
+
 		foreach ( $props as $name => $value ) {
 			$prop = (string) preg_replace( '#^crontrol_#', '', $name );
 
-			if ( property_exists( $this, $prop ) ) {
-				$this->$prop = $value;
+			if ( property_exists( $request, $prop ) ) {
+				$request->$prop = $value;
 			}
 		}
 
-		return $this;
+		return $request;
 	}
 }

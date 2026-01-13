@@ -10,16 +10,23 @@ parameters:
 		- tests/acceptance/
 		- tests/integration/
 	scanDirectories:
-		- tests/_support/
-		- vendor/lucatume/wp-browser/src/includes/factory/
+		- vendor/wp-phpunit/wp-phpunit/includes/
+	excludePaths:
+		analyseAndScan:
+			- vendor/yoast/wp-test-utils/src/BrainMonkey/bootstrap.php
 	bootstrapFiles:
 		- tests/phpstan/stubs.php
 	dynamicConstantNames:
 		- CRONTROL_DISALLOW_PHP_EVENTS
+		- CRONTROL_DISALLOW_URL_EVENTS
+		- DISABLE_WP_CRON
+	checkMissingOverrideMethodAttribute: true
 	WPCompat:
 		pluginFile: wp-crontrol.php
 	ignoreErrors:
 		-
-			identifier: requireOnce.fileNotFound
-		-
 			message: '#^Call to function method_exists\(\) with ''\\\\QM_Util'' and ''populate_callback'' will always evaluate to true\.$#'
+		-
+			# We can't guarantee that args from custom events are a list
+			message: '#^Parameter \#3 \$args of function wp_unschedule_event expects list<mixed>, array<mixed> given\.$#'
+			path: src/event.php

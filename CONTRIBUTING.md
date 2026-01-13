@@ -25,8 +25,8 @@ You can clone this repo and activate it like a normal WordPress plugin. If you w
 ### Prerequisites
 
 * [Composer](https://getcomposer.org/)
-* [Docker Desktop](https://www.docker.com/products/docker-desktop/) if you want to run the tests
-* [Node](https://nodejs.org/) if you are packaging a release
+* [Node.js](https://nodejs.org/) (version 20 or later)
+* [Docker Desktop](https://www.docker.com/products/docker-desktop/) (or compatible) to run the tests
 
 ### Setup
 
@@ -34,11 +34,22 @@ Install the PHP dependencies:
 
 	composer install
 
+Install the Node.js dependencies:
+
+	npm install
+
 ## Running the Tests
 
-The test suite includes acceptance tests which run in a Docker container. Ensure Docker Desktop is running before running the tests.
+The test suite consists of:
 
-To run the whole test suite which includes integration tests, acceptance tests, linting, and static analysis:
+* Acceptance tests using Playwright
+* Integration tests using PHPUnit
+* Linting using PHPCS
+* Static analysis using PHPStan
+
+The acceptance and integration tests run in a container. Ensure Docker Desktop is running before running the tests.
+
+To run the whole test suite:
 
 	composer test
 
@@ -49,9 +60,9 @@ To run tests individually, run one of:
 	composer test:integration
 	composer test:acceptance
 
-To run individual tests:
+To run a single test:
 
-	composer test:acceptance -- --codecept-args="tests/acceptance/AddEventCest.php"
+	composer test:acceptance -- tests/acceptance/AddEvent.spec.ts
 
 The individual integration and acceptance tests require the Docker containers to be running. To start and stop them, use:
 
@@ -100,13 +111,13 @@ These are the steps to take to release a new version of WP Crontrol (for contrib
 
 1.     git push origin develop
 1. Wait until (and ensure that) [the tests pass](https://github.com/johnbillion/wp-crontrol/actions)
-1.     git checkout trunk
-1.     git merge develop
-1.     git push origin trunk
-1.     git push origin trunk:release
+1.     git push origin develop:release
 1. Wait for [the Build Release action](https://github.com/johnbillion/wp-crontrol/actions/workflows/build.yml) to complete
 1. Enter the changelog into [the release on GitHub](https://github.com/johnbillion/wp-crontrol/releases) and publish it.
 1. Approve the release on [the WordPress.org release management dashboard](https://wordpress.org/plugins/developers/releases/).
+1.     git checkout trunk
+1.     git merge develop
+1.     git push origin trunk
 
 ### Post Release
 

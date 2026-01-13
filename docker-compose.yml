@@ -2,3 +2,11 @@ include:
   -
     path: vendor/johnbillion/plugin-infrastructure/tests/docker-compose.yml
     project_directory: .
+
+services:
+  httpbin:
+    image: mccutchen/go-httpbin:latest
+    container_name: ${COMPOSE_PROJECT_NAME}-httpbin
+    restart: always
+    environment:
+      PORT: 80

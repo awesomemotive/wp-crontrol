@@ -2,7 +2,5 @@
 /vendor/
 
 /composer.lock
-/package-lock.json
-/tests/_output/
-/tests/_support/_generated/
 /tests/cache/
+/phpunit.xml

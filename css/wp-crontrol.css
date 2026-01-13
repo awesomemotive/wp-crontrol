@@ -12,6 +12,14 @@ table.wp-list-table {
 	margin: 0;
 }
 
+.wp-list-table details summary {
+	cursor: pointer;
+}
+
+.wp-list-table details pre {
+	margin-top: 5px;
+}
+
 .wp-list-table code {
 	background: transparent;
 	padding: 0;
@@ -36,8 +44,8 @@ table.wp-list-table {
 	border-color: #d63638;
 }
 
-.wp-list-table tr.crontrol-inactive .column-crontrol_next,
-.wp-list-table tr.crontrol-inactive .column-crontrol_schedule,
+.wp-list-table tr.crontrol-disabled .column-crontrol_next,
+.wp-list-table tr.crontrol-disabled .column-crontrol_schedule,
 .wp-list-table tr.crontrol-paused .column-crontrol_next,
 .wp-list-table tr.crontrol-paused .column-crontrol_schedule,
 .wp-list-table tr.crontrol-paused:not(.crontrol-no-action) .column-crontrol_actions {
@@ -69,7 +77,7 @@ table.wp-list-table {
 	color: #d63638;
 }
 
-.status-crontrol-inactive .dashicons {
+.status-crontrol-disabled .dashicons {
 	background: #646970;
 	border-radius: 50%;
 	color: #fff;
@@ -107,6 +115,10 @@ input[type="time"][step="1"] {
 .crontrol-edit-event-php .crontrol-event-url,
 .crontrol-edit-event-php .crontrol-event-standard {
 	display: none;
+}
+
+#crontrol-event-not-found {
+	margin-top: 2em;
 }
 
 .crontrol-callout-container {

@@ -1,4 +1,4 @@
-# Security Policy
+# WP Crontrol Security Policy
 
 ## How can I report a security bug?
 

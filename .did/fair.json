@@ -1,0 +1,184 @@
+{
+  "@context": "https://fair.pm/ns/metadata/v1",
+  "id": "did:plc:kjnlj6j6hvasaxc6rchd3pnu",
+  "type": "wp-plugin",
+  "name": "WP Crontrol",
+  "slug": "wp-crontrol",
+  "filename": "wp-crontrol/wp-crontrol.php",
+  "description": "Take control of the cron events on your WordPress website.",
+  "authors": [
+    {
+      "name": "John Blackbourn",
+      "url": "https://wp-crontrol.com"
+    }
+  ],
+  "license": "GPL-2.0-or-later",
+  "security": [
+    {
+      "url": "https://wp-crontrol.com/security/"
+    }
+  ],
+  "keywords": [
+    "cron",
+    "wp-cron",
+    "crontrol",
+    "debug",
+    "woocommerce"
+  ],
+  "sections": {
+    "description": "<p>WP Crontrol enables you to take control of the scheduled cron events on your WordPress website or WooCommerce store. From the admin screens you can:</p>\n<ul>\n<li>View all scheduled cron events along with their arguments, schedule, callback functions, and when they are next due.</li>\n<li>Edit, delete, pause, resume, and immediately run cron events.</li>\n<li>Add new cron events.</li>\n<li>Bulk delete cron events.</li>\n<li>Add and remove custom cron schedules.</li>\n<li>Export and download cron event lists as a CSV file.</li>\n</ul>\n<p>WP Crontrol is aware of timezones, will alert you to events that have no actions or that have missed their schedule, and will show you a helpful warning message if it detects any problems with your cron system.</p>\n<h3>Usage</h3>\n<ol>\n<li>Go to the <code>Tools → Cron Events</code> menu to manage cron events.</li>\n<li>Go to the <code>Settings → Cron Schedules</code> menu to manage cron schedules.</li>\n</ol>\n<h3>Documentation</h3>\n<p><a href=\"https://wp-crontrol.com/docs/how-to-use/\">Extensive documentation on how to use WP Crontrol and how to get help for error messages that it shows is available on the WP Crontrol website</a>.</p>\n<h3>For site owners</h3>\n<p>Owners of WordPress websites and WooCommerce stores use WP Crontrol to ensure that scheduled cron events run correctly and efficiently. By providing complete control over cron events, WP Crontrol helps you:</p>\n<ul>\n<li><strong>Improve reliability</strong>: Address missed or failed cron events, ensuring your website or WooCommerce store continues to function as expected.</li>\n<li><strong>Enhance security</strong>: Monitor and control cron events to ensure automatic update checks are performed as they should.</li>\n<li><strong>Simplify management</strong>: Add, edit, delete, and pause cron events from a user-friendly interface, without needing to write any code.</li>\n<li><strong>Gain insights</strong>: Export cron event data for analysis or reporting.</li>\n<li><strong>Action Scheduler compatibility</strong>: Full support for the Action Scheduler system in WooCommerce, which is used to process recurring payments, subscriptions, and background orders.</li>\n<li><strong>Clarity of times and timezones</strong>: All times are shown with a clear and accurate indication of which timezone applies. No more guesswork!</li>\n</ul>\n<h3>For developers</h3>\n<p>Developers use WP Crontrol to streamline and debug their WordPress development process:</p>\n<ul>\n<li><strong>Enhanced debugging</strong>: Identify and troubleshoot issues with scheduled tasks, ensuring your scheduled events and their callbacks run as expected.</li>\n<li><strong>Custom schedules</strong>: Create and manage custom cron schedules to fit the specific needs of your website, plugins, or themes, providing greater flexibility than just the core schedules.</li>\n<li><strong>Efficient workflow</strong>: Add, edit, and delete cron events directly from the WordPress admin interface, saving time and reducing the need for manual coding.</li>\n<li><strong>Insightful monitoring</strong>: Get insight into the performance and behavior of your scheduled tasks, allowing for optimization and better resource management.</li>\n<li><strong>Accurate debugging</strong>: WP Crontrol goes to great lengths to ensure that running an event manually does so in a manner which exactly matches how WordPress core runs schdeuled events. This ensures that you can debug events accurately and with confidence.</li>\n</ul>\n<h3>Other Plugins</h3>\n<p>I maintain several other plugins for developers. Check them out:</p>\n<ul>\n<li><a href=\"https://wordpress.org/plugins/query-monitor/\">Query Monitor</a> is the developer tools panel for WordPress.</li>\n<li><a href=\"https://wordpress.org/plugins/user-switching/\">User Switching</a> provides instant switching between user accounts in WordPress.</li>\n</ul>\n<h3>Privacy Statement</h3>\n<p>WP Crontrol is private by default and always will be. It does not send data to any third party, nor does it include any third party resources. <a href=\"https://wp-crontrol.com/privacy/\">WP Crontrol&#39;s full privacy statement can be found here</a>.</p>\n<h3>Accessibility Statement</h3>\n<p>WP Crontrol aims to be fully accessible to all of its users. <a href=\"https://wp-crontrol.com/accessibility/\">WP Crontrol&#39;s full accessibility statement can be found here</a>.</p>\n",
+    "changelog": "<h3>1.20.0 (17 December 2025)</h3>\n<ul>\n<li>Confirms support for WordPress 6.9</li>\n<li>Minor UI and UX improvements</li>\n<li>Some architectural changes to prepare for future enhancements</li>\n</ul>\n<h3>1.19.3 (23 October 2025)</h3>\n<ul>\n<li>Corrects the handling of closures as cron event actions.</li>\n</ul>\n<h3>1.19.2 (19 August 2025)</h3>\n<ul>\n<li>Security: Hardens the &quot;URL cron event&quot; functionality by rejecting disallowed URLs. <a href=\"https://github.com/johnbillion/wp-crontrol/security/advisories/GHSA-35c5-67fm-cpcp\">More information see the security advisory</a>.</li>\n<li>Tweaks the display of some non-persistent WordPress core hooks when Multisite is enabled.</li>\n</ul>\n<h3>1.19.1 (3 June 2025)</h3>\n<ul>\n<li>Reinstates the ability to edit the Action Scheduler event.</li>\n</ul>\n<h3>1.19.0 (23 April 2025)</h3>\n<ul>\n<li>Confirms support for WordPress 6.8</li>\n<li>Further improvements to the display of dates, intervals, and timezones for increased clarity</li>\n<li>Adds more contextual help links for problematic events</li>\n<li>Various UI and UX improvements</li>\n</ul>\n<h3>1.18.0 (13 January 2025)</h3>\n<ul>\n<li>Introduces support for a <code>CRONTROL_DISALLOW_PHP_EVENTS</code> constant to fully disable the PHP cron event functionality. <a href=\"https://wp-crontrol.com/docs/php-cron-events/\">Full documentation here</a>.</li>\n<li>Further improvements to how time durations and timezone information is displayed.</li>\n</ul>\n<h3>1.17.1 (22 November 2024)</h3>\n<ul>\n<li>Confirms support for WordPress 6.7</li>\n<li>Avoids some warnings when running on PHP 8.3 and 8.4</li>\n</ul>\n<h3>1.17.0 (15 July 2024)</h3>\n<ul>\n<li>Introduces <a href=\"https://wp-crontrol.com/docs/url-cron-events/\">a new cron event type for sending a request to a URL</a></li>\n<li>Confirms support for WordPress 6.6</li>\n<li>Improves various aspects of the cron management interface and language</li>\n</ul>\n<h3>1.16.3 (19 April 2024)</h3>\n<ul>\n<li>Corrects the displayed PHP cron event name if one is provided</li>\n</ul>\n<h3>1.16.2 (24 March 2024)</h3>\n<ul>\n<li>Security hardening: <a href=\"https://wp-crontrol.com/help/check-php-cron-events/\">An anti-tampering mechanism has been introduced for PHP cron events</a></li>\n<li>Improvements to accessibility and internationalisation</li>\n<li>Removes the dependency on jQuery</li>\n<li>Confirms support for WordPress 6.5</li>\n</ul>\n<h3>Earlier versions</h3>\n<p>For the changelog of earlier versions, <a href=\"https://github.com/johnbillion/wp-crontrol/releases\">refer to the releases page on GitHub</a>.</p>\n",
+    "faq": "<h3>Does this plugin work with PHP 8?</h3>\n<p>Yes, it&#39;s actively tested and working up to PHP 8.4.</p>\n<h3>I get the error &quot;There was a problem spawning a call to the WP-Cron system on your site&quot;. How do I fix this?</h3>\n<p><a href=\"https://wp-crontrol.com/help/problems-spawning-wp-cron/\">You can read all about problems spawning WP-Cron on the WP Crontrol website</a>.</p>\n<h3>Why do some cron events miss their schedule?</h3>\n<p><a href=\"https://wp-crontrol.com/help/missed-cron-events/\">You can read all about cron events that miss their schedule on the WP Crontrol website</a>.</p>\n<h3>Why do some cron events reappear shortly after I delete them?</h3>\n<p>If the event is added by a plugin then the plugin most likely rescheduled the event as soon as it saw that the event was missing. To get around this you can instead use the &quot;Pause this hook&quot; action which means it&#39;ll remain in place but won&#39;t perform any action when it runs.</p>\n<h3>Is it safe to delete cron events?</h3>\n<p>This depends entirely on the event. You can use your favourite search engine to search for the event name in order to find out which plugin it belongs to, and then decide whether or not to delete it.</p>\n<p>If the event shows &quot;None&quot; as its action then it&#39;s usually safe to delete. Please see the other FAQs for more information about events with no action.</p>\n<h3>Why can&#39;t I delete some cron events?</h3>\n<p>The WordPress core software uses cron events for some of its functionality and removing these events is not possible because WordPress would immediately reschedule them if you did delete them. For this reason, WP Crontrol doesn&#39;t let you delete these persistent events from WordPress core in the first place.</p>\n<p>If you don&#39;t want these events to run, you can use the &quot;Pause this hook&quot; action instead.</p>\n<h3>What happens when I pause an event?</h3>\n<p>Pausing an event will disable all actions attached to the event&#39;s hook. The event itself will remain in place and will run according to its schedule, but all actions attached to its hook will be disabled. This renders the event inoperative but keeps it scheduled so as to remain fully compatible with events which would otherwise get automatically rescheduled when they&#39;re missing.</p>\n<p>As pausing an event actually pauses its hook, all events that use the same hook will be paused or resumed when pausing and resuming an event. This is much more useful and reliable than pausing individual events separately.</p>\n<h3>What happens when I resume an event?</h3>\n<p>Resuming an event re-enables all actions attached to the event&#39;s hook. All events that use the same hook will be resumed.</p>\n<h3>What does it mean when &quot;None&quot; is shown for the Action of a cron event?</h3>\n<p>This means the cron event is scheduled to run at the specified time but there is no corresponding functionality that will be triggered when the event runs, therefore the event is useless.</p>\n<p><a href=\"https://wp-crontrol.com/help/no-action-cron-events/\">You can read all about events with no action on the WP Crontrol website</a>.</p>\n<h3>How do I change the next run time or the schedule of a cron event?</h3>\n<p>You can change the time and schedule of a cron event by clicking the &quot;Edit&quot; link next to the event.</p>\n<h3>Why do changes that I make to some cron events not get saved?</h3>\n<p><a href=\"https://wp-crontrol.com/help/problems-managing-events/\">You can read all about problems with editing cron events on the WP Crontrol website</a>.</p>\n<h3>Can I export a list of cron events?</h3>\n<p>Yes, a CSV file of the event list can be exported and downloaded via the &quot;Export&quot; button on the cron event listing screen. This file can be opened in any spreadsheet application.</p>\n<h3>Can I see a historical log of all the cron events that ran on my site?</h3>\n<p>Not yet, but I hope to add this functionality soon.</p>\n<h3>Can I see a historical log of edits, additions, and deletions of cron events and schedules?</h3>\n<p>Yes. The excellent <a href=\"https://wordpress.org/plugins/simple-history/\">Simple History plugin</a> has built-in support for logging actions performed via WP Crontrol.</p>\n<h3>What&#39;s the use of adding new cron schedules?</h3>\n<p>Cron schedules are used by WordPress and plugins for scheduling events to be executed at regular intervals. Intervals must be provided by the WordPress core or a plugin in order to be used. As an example, many backup plugins provide support for periodic backups. In order to do a weekly backup, a weekly cron schedule must be entered into WP Crontrol first and then a backup plugin can take advantage of it as an interval.</p>\n<h3>How do I create a new cron event?</h3>\n<p>There are two steps to getting a functioning cron event that executes regularly. The first step is telling WordPress about the hook. This is the part that WP Crontrol was created to provide. The second step is calling a function when your hook is executed.</p>\n<p><em>Step One: Adding the event</em></p>\n<p>From the Tools → Cron Events menu, click on Add Cron Event. Fill out the details of the event. You&#39;re best off using a hook name that conforms to normal PHP variable naming conventions. The schedule is how often the event will be executed. If you don&#39;t see a good interval, then add one in the Settings → Cron Schedules menu.</p>\n<p><em>Step Two: Writing the function</em></p>\n<p>This part takes place in PHP code (for example, in the <code>functions.php</code> file from your theme). To execute your hook, WordPress runs an action. For this reason, we need to tell WordPress which function to execute when this action is run. The following line accomplishes that:</p>\n<pre><code class=\"language-php\">add_action( &#39;my_hookname&#39;, &#39;my_function&#39; );\n</code></pre>\n<p>The next step is to write your function. Here&#39;s a simple example:</p>\n<pre><code class=\"language-php\">function my_function() {\n\twp_mail( &#39;hello@example.com&#39;, &#39;WP Crontrol&#39;, &#39;WP Crontrol rocks!&#39; );\n}\n</code></pre>\n<h3>How can I create a cron event that requests a URL?</h3>\n<p>From the Tools → Cron Events menu, click on Add Cron Event. Select the &quot;URL cron event&quot; option, fill out the details, and press the &quot;Add Event&quot; button.</p>\n<p><a href=\"https://wp-crontrol.com/docs/url-cron-events/\">You can read all about the features and security of URL cron events on the WP Crontrol website</a>.</p>\n<h3>How do I create a new PHP cron event?</h3>\n<p>From the Tools → Cron Events menu, click on Add Cron Event. Select the &quot;PHP cron event&quot; option and enter the schedule and next run time. The event schedule is how often your event will be executed. If you don&#39;t see a good interval, then add one in the Settings → Cron Schedules menu. In the &quot;PHP Code&quot; area, enter the PHP code that should be run when your cron event is executed. You don&#39;t need to provide the PHP opening tag (<code>&lt;?php</code>).</p>\n<p>Creating, editing, and running PHP cron events is subject to restrictive security permissions. <a href=\"https://wp-crontrol.com/docs/php-cron-events/\">You can read all about the features and security of PHP cron events on the WP Crontrol website</a>.</p>\n<h3>Which users can manage cron events and schedules?</h3>\n<p>Only users with the <code>manage_options</code> capability can manage cron events and schedules. By default, only Administrators have this capability.</p>\n<h3>Which users can manage PHP cron events? Is this dangerous?</h3>\n<p>Only users with the <code>edit_files</code> capability can manage PHP cron events. This means if a user cannot edit files via the WordPress admin area (i.e. through the Plugin Editor or Theme Editor) then they also cannot add, edit, or delete a PHP cron event in WP Crontrol. By default only Administrators have this capability, and with Multisite enabled only Super Admins have this capability.</p>\n<p>If file editing has been disabled via the <code>DISALLOW_FILE_MODS</code> or <code>DISALLOW_FILE_EDIT</code> configuration constants then no user will have the <code>edit_files</code> capability, which means adding, editing, or deleting a PHP cron event will not be permitted.</p>\n<p>Therefore, the user access level required to execute arbitrary PHP code does not change with WP Crontrol activated.</p>\n<p>If the <code>CRONTROL_DISALLOW_PHP_EVENTS</code> constant is defined and set to <code>true</code>, then PHP cron events will be disabled completely. Any existing PHP cron events will remain in place (and can be deleted if user permissions allow) but their PHP code will not be executed when the event runs, and no PHP cron events can be added, edited, or run.</p>\n<p><a href=\"https://wp-crontrol.com/docs/php-cron-events/\">You can read all about the features and security of PHP cron events on the WP Crontrol website</a>.</p>\n<h3>Are any WP-CLI commands available?</h3>\n<p>The cron commands which were previously included in WP Crontrol are now part of WP-CLI itself. See <code>wp help cron</code> for more info.</p>\n<h3>What happens when I deactivate the WP Crontrol plugin?</h3>\n<p><a href=\"https://wp-crontrol.com/docs/deactivation/\">You can read all about what happens when you deactivate the plugin on the WP Crontrol website</a>.</p>\n<h3>How can I report a security bug?</h3>\n<p><a href=\"https://patchstack.com/database/vdp/wp-crontrol\">You can report security bugs through the official WP Crontrol Vulnerability Disclosure Program on Patchstack</a>. The Patchstack team helps validate, triage, and handle any security vulnerabilities.</p>\n<h3>Who took the photo in the plugin header image?</h3>\n<p>The photo was taken by <a href=\"https://www.flickr.com/photos/michaelpardo/21453119315\">Michael Pardo</a> and is in the public domain.</p>\n",
+    "screenshots": "<ol>\n<li><a href=\"https://ps.w.org/wp-crontrol/assets/screenshot-1.png\"><img src=\"https://ps.w.org/wp-crontrol/assets/screenshot-1.png\" alt=\"Cron events can be modified, deleted, and executed\"></a><p>Cron events can be modified, deleted, and executed</p>\n</li>\n<li><a href=\"https://ps.w.org/wp-crontrol/assets/screenshot-2.png\"><img src=\"https://ps.w.org/wp-crontrol/assets/screenshot-2.png\" alt=\"New cron events can be added\"></a><p>New cron events can be added</p>\n</li>\n<li><a href=\"https://ps.w.org/wp-crontrol/assets/screenshot-3.png\"><img src=\"https://ps.w.org/wp-crontrol/assets/screenshot-3.png\" alt=\"New cron schedules can be added, giving plugin developers more options when scheduling events\"></a><p>New cron schedules can be added, giving plugin developers more options when scheduling events</p>\n</li>\n</ol>\n"
+  },
+  "releases": [
+    {
+      "version": "1.20.0",
+      "artifacts": {
+        "banner": [
+          {
+            "url": "https://ps.w.org/wp-crontrol/assets/banner-772x250.jpg",
+            "content-type": "image/jpeg",
+            "height": 250,
+            "width": 772
+          },
+          {
+            "url": "https://ps.w.org/wp-crontrol/assets/banner-1544x500.jpg",
+            "content-type": "image/jpeg",
+            "height": 500,
+            "width": 1544
+          }
+        ],
+        "icon": [
+          {
+            "url": "https://ps.w.org/wp-crontrol/assets/icon.svg",
+            "content-type": "image/svg+xml",
+            "height": null,
+            "width": null
+          },
+          {
+            "url": "https://ps.w.org/wp-crontrol/assets/icon-128x128.png",
+            "content-type": "image/png",
+            "height": 128,
+            "width": 128
+          },
+          {
+            "url": "https://ps.w.org/wp-crontrol/assets/icon-256x256.png",
+            "content-type": "image/png",
+            "height": 256,
+            "width": 256
+          }
+        ],
+        "screenshot": [
+          {
+            "url": "https://ps.w.org/wp-crontrol/assets/screenshot-1.png",
+            "content-type": "image/png",
+            "height": 844,
+            "width": 1514
+          },
+          {
+            "url": "https://ps.w.org/wp-crontrol/assets/screenshot-2.png",
+            "content-type": "image/png",
+            "height": 844,
+            "width": 1514
+          },
+          {
+            "url": "https://ps.w.org/wp-crontrol/assets/screenshot-3.png",
+            "content-type": "image/png",
+            "height": 844,
+            "width": 1514
+          }
+        ],
+        "package": [
+          {
+            "url": "https://downloads.wordpress.org/plugin/wp-crontrol.1.20.0.zip",
+            "checksum": "sha256:ea3e584969350c8dbec538e41ed4819142c8f396b4efdf67e0c19b7a08a9c7dd",
+            "content-type": "application/zip",
+            "signature": "4RN7KluYRCaL2YUdXQ4eKgNsPS14ZVWxUgxB8REi7JIre7gxzXAmsNaK67XVyevLphFA3-zPVAJgfPUAHe8RCg"
+          }
+        ]
+      },
+      "suggests": {
+        "env:wp": ">=6.9"
+      },
+      "requires": {
+        "env:wp": ">=6.4",
+        "env:php": ">=7.4"
+      }
+    },
+    {
+      "version": "1.19.3",
+      "artifacts": {
+        "banner": [
+          {
+            "url": "https://ps.w.org/wp-crontrol/assets/banner-772x250.jpg",
+            "content-type": "image/jpeg",
+            "height": 250,
+            "width": 772
+          },
+          {
+            "url": "https://ps.w.org/wp-crontrol/assets/banner-1544x500.jpg",
+            "content-type": "image/jpeg",
+            "height": 500,
+            "width": 1544
+          }
+        ],
+        "icon": [
+          {
+            "url": "https://ps.w.org/wp-crontrol/assets/icon.svg",
+            "content-type": "image/svg+xml",
+            "height": null,
+            "width": null
+          },
+          {
+            "url": "https://ps.w.org/wp-crontrol/assets/icon-128x128.png",
+            "content-type": "image/png",
+            "height": 128,
+            "width": 128
+          },
+          {
+            "url": "https://ps.w.org/wp-crontrol/assets/icon-256x256.png",
+            "content-type": "image/png",
+            "height": 256,
+            "width": 256
+          }
+        ],
+        "screenshot": [
+          {
+            "url": "https://ps.w.org/wp-crontrol/assets/screenshot-1.png",
+            "content-type": "image/png",
+            "height": 844,
+            "width": 1514
+          },
+          {
+            "url": "https://ps.w.org/wp-crontrol/assets/screenshot-2.png",
+            "content-type": "image/png",
+            "height": 844,
+            "width": 1514
+          },
+          {
+            "url": "https://ps.w.org/wp-crontrol/assets/screenshot-3.png",
+            "content-type": "image/png",
+            "height": 844,
+            "width": 1514
+          }
+        ],
+        "package": [
+          {
+            "url": "https://downloads.wordpress.org/plugin/wp-crontrol.1.19.3.zip",
+            "checksum": "sha256:a9594db0d4d9944f9567d64ff1b61c5c589ae7dc61760ca4f6cea0c3e7270dd5",
+            "content-type": "application/zip",
+            "signature": "XRHE6bu6JRthjsQYhY_N9vaaHssGngJCz_D30e3cbcC7J1I-VEYyuVoEBqIQykESUJ05bbLqIXZph73UBckUAQ"
+          }
+        ]
+      },
+      "suggests": {
+        "env:wp": ">=6.8"
+      },
+      "requires": {
+        "env:wp": ">=6.4",
+        "env:php": ">=7.4"
+      }
+    }
+  ]
+}

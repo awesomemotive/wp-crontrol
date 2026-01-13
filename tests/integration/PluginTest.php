@@ -15,7 +15,7 @@ class PluginTest extends Test {
 			self::fail( 'There is no readme file' );
 		}
 
-		$plugin_data = get_plugin_data( dirname( dirname( dirname( __FILE__ ) ) ) . '/wp-crontrol.php' );
+		$plugin_data = get_plugin_data( dirname( dirname( __DIR__ ) ) . '/wp-crontrol.php' );
 
 		self::assertSame( $readme_data['stable_tag'], $plugin_data['Version'] );
 	}
@@ -27,7 +27,7 @@ class PluginTest extends Test {
 	 */
 	private function get_readme() {
 		if ( ! isset( $this->readme_data ) ) {
-			$file = dirname( dirname( dirname( __FILE__ ) ) ) . '/readme.txt';
+			$file = dirname( dirname( __DIR__ ) ) . '/readme.txt';
 
 			if ( ! is_file( $file ) ) {
 				return false;
@@ -46,11 +46,10 @@ class PluginTest extends Test {
 			}
 
 			$this->readme_data = array(
-				'stable_tag' => trim( trim( $_stable_tag[1], '*' ) )
+				'stable_tag' => trim( trim( $_stable_tag[1], '*' ) ),
 			);
 		}
 
 		return $this->readme_data;
 	}
-
 }

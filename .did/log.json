@@ -1,0 +1,135 @@
+[
+	{
+		"sig": "KVySKNiZnZX723l-GZMA23OUtND217hapKmzx-DyigwL7eE5iDlGms_utrj1tH6Q5IHKJix5HKGX9HnHcESn1A",
+		"prev": null,
+		"type": "plc_operation",
+		"services": {},
+		"alsoKnownAs": [],
+		"rotationKeys": [
+			"did:key:zQ3shTimxo4bzH5ykJAPk4E2mWkVoz3r4uqevAzhaS818Zzdt"
+		],
+		"verificationMethods": {
+			"fair": "did:key:z6Mkm1oLUKzvVNy87BWZYnKsauAsQ14LEDeAxLfR5bNFpMMN"
+		}
+	},
+	{
+		"sig": "rMs3xtz5RjcfGgMGWpJDzpSRelH9ZGMKPIKsFRRwXMV6nLwvdO_2KzoeqIiNFhdbp_oV7lnTlnxjua_GCaEdbg",
+		"prev": "bafyreicslk2pspr5ieqfyxuiry633nevrunc2sdlgijxyakj57ozcnmju4",
+		"type": "plc_operation",
+		"services": {
+			"fairpm_repo": {
+				"type": "FairPackageManagementRepo",
+				"endpoint": "https://raw.githubusercontent.com/johnbillion/wp-crontrol/refs/heads/develop/fair.json"
+			}
+		},
+		"alsoKnownAs": [],
+		"rotationKeys": [
+			"did:key:zQ3shTimxo4bzH5ykJAPk4E2mWkVoz3r4uqevAzhaS818Zzdt"
+		],
+		"verificationMethods": {
+			"fair": "did:key:z6Mkm1oLUKzvVNy87BWZYnKsauAsQ14LEDeAxLfR5bNFpMMN"
+		}
+	},
+	{
+		"sig": "Q_qEYJf5SFiGDCqzC-Bz_FECcj7jjAauo-n3F7oFVFYvXEFxaenLlRukynYGoGf3CoETs8YHdFL-hIf6S4nAXw",
+		"prev": "bafyreidpzbxdoxlpskpikqos5rejzhtt36avqzm6jvq6xff4dvvfbywf24",
+		"type": "plc_operation",
+		"services": {
+			"fairpm_repo": {
+				"type": "FairPackageManagementRepo",
+				"endpoint": "https://raw.githubusercontent.com/johnbillion/wp-crontrol/refs/heads/develop/fair.json"
+			}
+		},
+		"alsoKnownAs": [
+			"https://wp-crontrol.com"
+		],
+		"rotationKeys": [
+			"did:key:zQ3shTimxo4bzH5ykJAPk4E2mWkVoz3r4uqevAzhaS818Zzdt"
+		],
+		"verificationMethods": {
+			"fair": "did:key:z6Mkm1oLUKzvVNy87BWZYnKsauAsQ14LEDeAxLfR5bNFpMMN"
+		}
+	},
+	{
+		"sig": "G46hbUQvP9N4u_5X6H3sIBDYZ7sIp6DIPSBhyHkR31o53FfCZDN9aJ2TJcQk9YJBkEAZvUEntRHhHIFjusgmow",
+		"prev": "bafyreiej3xvcq2poy5xnwr6kby2rabofcf2zzxbofpiyybxcygqy443ogi",
+		"type": "plc_operation",
+		"services": {
+			"fairpm_repo": {
+				"type": "FairPackageManagementRepo",
+				"endpoint": "https://raw.githubusercontent.com/johnbillion/wp-crontrol/refs/heads/develop/fair.json"
+			}
+		},
+		"alsoKnownAs": [
+			"https://wp-crontrol.com",
+			"https://wordpress.org/plugins/wp-crontrol/"
+		],
+		"rotationKeys": [
+			"did:key:zQ3shTimxo4bzH5ykJAPk4E2mWkVoz3r4uqevAzhaS818Zzdt"
+		],
+		"verificationMethods": {
+			"fair": "did:key:z6Mkm1oLUKzvVNy87BWZYnKsauAsQ14LEDeAxLfR5bNFpMMN"
+		}
+	},
+	{
+		"sig": "LnuSd8o8ZakooJ1hjLGc_r7iiWIiyh1j1mTf5xiV2MQlkTaMNdOZVSc3lYPGZOs6kTxtBApU7VGv7wgLYXE6UA",
+		"prev": "bafyreifks5zls3gls7x5kmgwv2gza7vjvouxgahazvuy45meygswxaelai",
+		"type": "plc_operation",
+		"services": {
+			"fairpm_repo": {
+				"type": "FairPackageManagementRepo",
+				"endpoint": "https://raw.githubusercontent.com/johnbillion/wp-crontrol/refs/heads/develop/fair.json"
+			}
+		},
+		"alsoKnownAs": [
+			"fair://wp-crontrol.com",
+			"https://wordpress.org/plugins/wp-crontrol/"
+		],
+		"rotationKeys": [
+			"did:key:zQ3shTimxo4bzH5ykJAPk4E2mWkVoz3r4uqevAzhaS818Zzdt"
+		],
+		"verificationMethods": {
+			"fair": "did:key:z6Mkm1oLUKzvVNy87BWZYnKsauAsQ14LEDeAxLfR5bNFpMMN"
+		}
+	},
+	{
+		"sig": "Yco-2XAambgXXZEHFvjzT8uU1bEPvnF9Pljh3iLlkcdehn56jjFx1macFMAqbcHkuUiKBuOVBG03KuHvAze2Bg",
+		"prev": "bafyreidh4pgutbenhkpm6h2fly5mlpbka7jg4uf5rpncbk2clxgah3sqau",
+		"type": "plc_operation",
+		"services": {
+			"fairpm_repo": {
+				"type": "FairPackageManagementRepo",
+				"endpoint": "https://raw.githubusercontent.com/johnbillion/wp-crontrol/refs/heads/develop/fair.json"
+			}
+		},
+		"alsoKnownAs": [
+			"fair://wp-crontrol.com"
+		],
+		"rotationKeys": [
+			"did:key:zQ3shTimxo4bzH5ykJAPk4E2mWkVoz3r4uqevAzhaS818Zzdt"
+		],
+		"verificationMethods": {
+			"fair": "did:key:z6Mkm1oLUKzvVNy87BWZYnKsauAsQ14LEDeAxLfR5bNFpMMN"
+		}
+	},
+	{
+		"sig": "vjcggkiYjwu1dwhzpFrhRCxBs9IqGfPOIh62Dm6_7nQjjgXbRvGhzXAADNH-XblZQOzAASjNo2IIVRMXyqFhvg",
+		"prev": "bafyreiaolruziipo7r7ybpkun4vqemtjejtvuowpedpgxeg5zvvgc4btne",
+		"type": "plc_operation",
+		"services": {
+			"fairpm_repo": {
+				"type": "FairPackageManagementRepo",
+				"endpoint": "https://raw.githubusercontent.com/johnbillion/wp-crontrol/refs/heads/develop/.did/fair.json"
+			}
+		},
+		"alsoKnownAs": [
+			"fair://wp-crontrol.com"
+		],
+		"rotationKeys": [
+			"did:key:zQ3shTimxo4bzH5ykJAPk4E2mWkVoz3r4uqevAzhaS818Zzdt"
+		],
+		"verificationMethods": {
+			"fair": "did:key:z6Mkm1oLUKzvVNy87BWZYnKsauAsQ14LEDeAxLfR5bNFpMMN"
+		}
+	}
+]

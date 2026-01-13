@@ -26,21 +26,13 @@
 		}
 	},
 	"require-dev": {
-		"behat/gherkin": "< 4.13.0",
-		"codeception/module-asserts": "^1.0",
-		"codeception/module-db": "^1.0",
-		"codeception/module-webdriver": "^1.0",
-		"codeception/util-universalframework": "^1.0",
-		"dealerdirect/phpcodesniffer-composer-installer": "^0.7.0",
-		"johnbillion/plugin-infrastructure": "1.2.1",
-		"johnbillion/wp-compat": "^1.2",
-		"lucatume/wp-browser": "3.2.1",
-		"phpcompatibility/phpcompatibility-wp": "2.1.6",
-		"phpstan/phpstan": "2.1.12",
-		"roots/wordpress-core-installer": "1.100.0",
-		"roots/wordpress-full": "*",
-		"szepeviktor/phpstan-wordpress": "2.0.1",
-		"wp-coding-standards/wpcs": "3.1.0"
+		"johnbillion/plugin-infrastructure": "2.5.1",
+		"johnbillion/wp-compat": "1.4.0",
+		"php-stubs/wordpress-stubs": "6.9.0",
+		"phpcompatibility/phpcompatibility-wp": "2.1.8",
+		"phpstan/phpstan": "2.1.33",
+		"szepeviktor/phpstan-wordpress": "2.0.3",
+		"wp-coding-standards/wpcs": "3.3.0"
 	},
 	"require": {
 		"php": ">=7.4",
@@ -66,6 +58,7 @@
 		"test": [
 			"@composer validate --strict --no-check-lock",
 			"@test:phpstan",
+			"@test:phpcbf",
 			"@test:phpcs",
 			"@test:start",
 			"@test:integration",
@@ -81,8 +74,10 @@
 		"test:phpcs": [
 			"phpcs -nps --colors --report-code --report-summary --report-width=80 --basepath=./ ."
 		],
+		"test:phpcbf": [
+			"phpcbf -nps --colors --report-code --report-summary --report-width=80 --basepath=./ ."
+		],
 		"test:phpstan": [
-			"codecept build #",
 			"phpstan analyze -v --memory-limit=1024M"
 		],
 		"test:start": [
@@ -90,13 +85,16 @@
 		],
 		"test:stop": [
 			"tests-stop"
+		],
+		"test:destroy": [
+			"tests-destroy"
 		]
 	},
 	"support": {
 		"issues": "https://github.com/johnbillion/wp-crontrol/issues",
 		"forum": "https://wordpress.org/support/plugin/wp-crontrol",
 		"source": "https://github.com/johnbillion/wp-crontrol",
-		"security": "https://patchstack.com/database/vdp/wp-crontrol"
+		"security": "https://wp-crontrol.com/security/"
 	},
 	"funding": [
 		{

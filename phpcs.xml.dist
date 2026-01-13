@@ -2,7 +2,7 @@
 <ruleset name="WP Crontrol">
 
 	<config name="testVersion" value="7.4-"/>
-	<config name="minimum_wp_version" value="6.3"/>
+	<config name="minimum_wp_version" value="6.4"/>
 	<arg name="extensions" value="php"/>
 	<arg name="cache" value="tests/cache/phpcs.json"/>
 
@@ -39,6 +39,10 @@
 		<exclude name="Universal.Arrays.DisallowShortArraySyntax.Found"/>
 		<exclude name="WordPress.PHP.YodaConditions.NotYoda"/>
 		<exclude name="Universal.Operators.DisallowShortTernary.Found"/>
+		<exclude name="Squiz.Commenting.VariableComment.MissingVar"/>
+
+		<!-- Exceptions in WP Crontrol are caught appropriately. -->
+		<exclude name="WordPress.Security.EscapeOutput.ExceptionNotEscaped"/>
 	</rule>
 
 	<!-- Ignore some rules for the tests -->
@@ -62,7 +66,9 @@
 
 	<rule ref="WordPress.WP.I18n">
 		<properties>
-			<property name="text_domain" type="array" value="wp-crontrol"/>
+			<property name="text_domain" type="array">
+				<element value="wp-crontrol"/>
+			</property>
 		</properties>
 	</rule>
 

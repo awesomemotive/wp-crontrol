@@ -5,8 +5,9 @@
 
 namespace Crontrol\Event;
 
-use stdClass;
-use Crontrol\Schedule;
+use Crontrol\Context\WordPressFeatureContext;
+use Crontrol\Context\WordPressUserContext;
+use Crontrol\Exception\InvalidURLException;
 use WP_Error;
 
 use const Crontrol\PAUSED_OPTION;
@@ -23,14 +24,11 @@ use const Crontrol\PAUSED_OPTION;
 function run( $hookname, $sig ) {
 	$crons = get_core_cron_array();
 
-	foreach ( $crons as $time => $cron ) {
+	foreach ( $crons as $cron ) {
 		if ( isset( $cron[ $hookname ][ $sig ] ) ) {
-			$event = $cron[ $hookname ][ $sig ];
+			$data = $cron[ $hookname ][ $sig ];
 
-			$event['hook'] = $hookname;
-			$event['timestamp'] = $time;
-
-			$event = (object) $event;
+			$event = Event::create_immediate( $hookname, $data['args'] );
 
 			delete_transient( 'doing_cron' );
 			$scheduled = force_schedule_single_event( $hookname, $event->args ); // UTC
@@ -51,15 +49,7 @@ function run( $hookname, $sig ) {
 			/**
 			 * Fires after a cron event is scheduled to run manually.
 			 *
-			 * @param stdClass $event {
-			 *     An object containing the event's data.
-			 *
-			 *     @type string       $hook      Action hook to execute when the event is run.
-			 *     @type int          $timestamp Unix timestamp (UTC) for when to next run the event.
-			 *     @type string|false $schedule  How often the event should subsequently recur.
-			 *     @type array        $args      Array containing each separate argument to pass to the hook's callback function.
-			 *     @type int          $interval  The interval time in seconds for the schedule. Only present for recurring events.
-			 * }
+			 * @param Event $event An object containing the event's data.
 			 */
 			do_action( 'crontrol/ran_event', $event );
 
@@ -146,7 +136,7 @@ function add( $next_run_local, $schedule, $hook, array $args ) {
 	$next_run_utc = (int) get_gmt_from_date( gmdate( 'Y-m-d H:i:s', $next_run_local ), 'U' );
 	$error = null;
 
-	if ( 'crontrol_cron_job' === $hook && ! empty( $args[0]['code'] ) ) {
+	if ( PHPCronEvent::HOOK_NAME === $hook && ! empty( $args[0]['code'] ) ) {
 		try {
 			/**
 			 * The call to `eval()` below checks the syntax of the PHP code provided in the cron event. This is done to
@@ -168,10 +158,10 @@ function add( $next_run_local, $schedule, $hook, array $args ) {
 		}
 	}
 
-	if ( 'crontrol_url_cron_job' === $hook && ! empty( $args[0]['url'] ) ) {
+	if ( URLCronEvent::HOOK_NAME === $hook && ! empty( $args[0]['url'] ) ) {
 		try {
 			validate_url( $args[0]['url'] );
-		} catch ( \InvalidArgumentException $e ) {
+		} catch ( InvalidURLException $e ) {
 			$args[0]['url_error_message'] = $e->getMessage();
 			$error = $e;
 		}
@@ -286,7 +276,7 @@ function resume( $hook ) {
 /**
  * Returns a flattened array of cron events.
  *
- * @return array<string,stdClass> An array of cron event objects keyed by unique signature.
+ * @return array<string,Event> An array of cron event objects keyed by unique signature.
  */
 function get() {
 	$crons  = get_core_cron_array();
@@ -299,17 +289,14 @@ function get() {
 	foreach ( $crons as $time => $cron ) {
 		foreach ( $cron as $hook => $dings ) {
 			foreach ( $dings as $sig => $data ) {
-
-				// This is a prime candidate for a Crontrol_Event class but I'm not bothering currently.
-				$events[ "$hook-$sig-$time" ] = (object) array(
-					'hook'     => $hook,
-					'timestamp' => $time, // UTC
-					'sig'      => $sig,
-					'args'     => $data['args'],
-					'schedule' => $data['schedule'],
-					'interval' => isset( $data['interval'] ) ? $data['interval'] : null,
+				$events[ "$hook-$sig-$time" ] = Event::create(
+					$hook,
+					$time,
+					$sig,
+					$data['args'],
+					$data['schedule'] ?: null,
+					$data['interval'] ?? null,
 				);
-
 			}
 		}
 	}
@@ -322,26 +309,55 @@ function get() {
 }
 
 /**
+ * Finds a single matching cron event by hook, timestamp, and signature.
+ *
+ * @param string     $hook      The hook name of the event.
+ * @param int        $timestamp The UTC timestamp when the event would be run at.
+ * @param string     $sig       The event signature.
+ * @return Event|null A cron event object, or null if it's not found.
+ */
+function find( string $hook, int $timestamp, string $sig ): ?Event {
+	$crons = get_core_cron_array();
+
+	if ( ! isset( $crons[ $timestamp ][ $hook ][ $sig ] ) ) {
+		return null;
+	}
+
+	$data = $crons[ $timestamp ][ $hook ][ $sig ];
+
+	return Event::create(
+		$hook,
+		$timestamp,
+		$sig,
+		$data['args'],
+		$data['schedule'] ?: null,
+		$data['interval'] ?? null,
+	);
+}
+
+/**
  * Gets a single cron event.
  *
  * @param string     $hook         The hook name of the event.
  * @param string     $sig          The event signature.
  * @param string|int $next_run_utc The UTC time that the event would be run at.
- * @return stdClass|WP_Error A cron event object, or a WP_Error if it's not found.
+ * @return Event|WP_Error A cron event object, or a WP_Error if it's not found.
  */
 function get_single( $hook, $sig, $next_run_utc ) {
 	$crons = get_core_cron_array();
 	$next_run_utc = (int) $next_run_utc;
 
 	if ( isset( $crons[ $next_run_utc ][ $hook ][ $sig ] ) ) {
-		$event = $crons[ $next_run_utc ][ $hook ][ $sig ];
+		$data = $crons[ $next_run_utc ][ $hook ][ $sig ];
 
-		$event['hook'] = $hook;
-		$event['timestamp'] = $next_run_utc;
-
-		$event = (object) $event;
-
-		return $event;
+		return Event::create(
+			$hook,
+			$next_run_utc,
+			$sig,
+			$data['args'],
+			$data['schedule'] ?: null,
+			$data['interval'] ?? null,
+		);
 	}
 
 	return new WP_Error(
@@ -381,101 +397,61 @@ function count_by_hook() {
 }
 
 /**
- * Returns the schedule display name for a given event.
- *
- * @param stdClass $event A WP-Cron event.
- * @return string|WP_Error The interval display name, or a WP_Error object if no such schedule exists.
+ * Event filtering, pagination, and manipulation functions.
  */
-function get_schedule_name( stdClass $event ) {
-	$schedules = Schedule\get();
 
-	if ( isset( $schedules[ $event->schedule ] ) ) {
-		return isset( $schedules[ $event->schedule ]['display'] ) ? $schedules[ $event->schedule ]['display'] : $schedules[ $event->schedule ]['name'];
-	}
+/**
+ * Filters events to include only those with hook names that appear more than once.
+ *
+ * @param array<string,Event> $events The list of all events.
+ * @return array<string,Event> Array of events with duplicated hook names.
+ */
+function filter_duplicated( array $events ): array {
+	$hook_counts = count_by_hook();
 
-	return new WP_Error( 'unknown_schedule', sprintf(
-		/* translators: %s: Schedule name */
-		__( 'Unknown (%s)', 'wp-crontrol' ),
-		$event->schedule
+	return array_filter(
+		$events,
+		fn( $event ) => isset( $hook_counts[ $event->hook ] ) && $hook_counts[ $event->hook ] > 1
+	);
+}
+
+/**
+ * Filters events by search term matching the hook name.
+ *
+ * @param array<string,Event> $events The list of all events.
+ * @param string              $search Search term to filter by.
+ * @return array<string,Event> Array of events matching the search term.
+ */
+function filter_by_search( array $events, string $search ): array {
+	return array_filter(
+		$events,
+		fn( $event ) => false !== strpos( $event->hook, $search )
+	);
+}
+
+/**
+ * Paginates events for display.
+ *
+ * @param array<string,Event> $events   Array of events to paginate.
+ * @param int                 $page_num Current page number (1-indexed).
+ * @param int                 $per_page Number of events per page.
+ * @return list<Event> Paginated array of events.
+ */
+function paginate( array $events, int $page_num, int $per_page ): array {
+	$offset = ( $page_num - 1 ) * $per_page;
+	return array_values( array_slice( $events, $offset, $per_page ) );
+}
+
+/**
+ * Checks if any events have integrity failures.
+ *
+ * @param array<string,Event> $events Array of events to check.
+ */
+function has_integrity_failures( array $events ): bool {
+	return (bool) array_filter( array_map(
+		fn( $event ) => $event->integrity_failed(),
+		$events
 	) );
-}
-
-/**
- * Determines whether the schedule for an event means it runs too frequently to be reliable.
- *
- * @param stdClass $event A WP-Cron event.
- * @return bool Whether the event scheduled is too frequent.
- */
-function is_too_frequent( stdClass $event ) {
-	$schedules = Schedule\get();
-
-	if ( ! isset( $schedules[ $event->schedule ] ) ) {
-		return false;
-	}
-
-	return $schedules[ $event->schedule ]['is_too_frequent'];
-}
-
-/**
- * Determines whether an event is late.
- *
- * An event which has missed its schedule by more than 10 minutes is considered late.
- *
- * @param stdClass $event The event.
- * @return bool Whether the event is late.
- */
-function is_late( stdClass $event ) {
-	$until = $event->timestamp - time();
-
-	return ( $until < ( 0 - ( 10 * MINUTE_IN_SECONDS ) ) );
-}
-
-/**
- * Determines whether an event is paused.
- *
- * @param stdClass $event The event.
- * @return bool Whether the event is paused.
- */
-function is_paused( stdClass $event ) {
-	$paused = get_option( PAUSED_OPTION );
-
-	if ( ! is_array( $paused ) ) {
-		return false;
-	}
-
-	return array_key_exists( $event->hook, $paused );
-}
-
-/**
- * Determines whether the integrity check of a URL or PHP cron event has failed.
- *
- * @param stdClass $event The event.
- * @return bool Whether the event integrity check has failed.
- */
-function integrity_failed( stdClass $event ): bool {
-	$args = $event->args[0] ?? array();
-	$failed = false;
-
-	switch ( $event->hook ) {
-
-		// PHP cron events:
-		case 'crontrol_cron_job':
-			// This is a PHP cron event saved prior to WP Crontrol 1.16.2.
-			if ( isset( $event->args['code'] ) ) {
-				$failed = true;
-			} else {
-				$failed = ! check_integrity( $args['code'] ?? null, $args['hash'] ?? null );
-			}
-			break;
-
-		// URL cron events:
-		case 'crontrol_url_cron_job':
-			$failed = ! check_integrity( $args['url'] ?? null, $args['hash'] ?? null );
-			break;
-
-	}
-
-	return $failed;
 }
 
 /**
@@ -506,9 +482,8 @@ function get_list_table() {
 	static $table = null;
 
 	if ( ! $table ) {
-		$table = new Table();
+		$table = new Table( new WordPressUserContext(), new WordPressFeatureContext() );
 		$table->prepare_items();
-
 	}
 
 	return $table;
@@ -520,11 +495,11 @@ function get_list_table() {
  * The comparison function returns an integer less than, equal to, or greater than zero if the first argument is
  * considered to be respectively less than, equal to, or greater than the second.
  *
- * @param stdClass $a The first event to compare.
- * @param stdClass $b The second event to compare.
+ * @param Event $a The first event to compare.
+ * @param Event $b The second event to compare.
  * @return int
  */
-function uasort_order_events( $a, $b ) {
+function uasort_order_events( Event $a, Event $b ): int {
 	$orderby = ( ! empty( $_GET['orderby'] ) && is_string( $_GET['orderby'] ) ) ? sanitize_text_field( $_GET['orderby'] ) : 'crontrol_next';
 	$order   = ( ! empty( $_GET['order'] ) && is_string( $_GET['order'] ) ) ? sanitize_text_field( $_GET['order'] ) : 'asc';
 	$compare = 0;
@@ -581,7 +556,7 @@ function get_core_cron_array() {
  *
  * @see https://github.com/WordPress/wordpress-develop/blob/197f0a71ad27d0688b6380c869aeaf92addd1451/src/wp-includes/class-wp-http.php#L283-L299
  *
- * @throws \InvalidArgumentException If the URL is not valid or contains an invalid protocol.
+ * @throws \Crontrol\Exception\InvalidURLException If the URL is invalid or not allowed.
  *
  * @param string $url The URL to validate.
  */
@@ -589,27 +564,11 @@ function validate_url( string $url ): void {
 	$valid = wp_http_validate_url( $url );
 
 	if ( $valid === false ) {
-		throw new \InvalidArgumentException(
-			esc_html(
-				sprintf(
-					/* translators: %s: The URL that failed validation. */
-					__( 'The URL "%s" is not allowed', 'wp-crontrol' ),
-					$url,
-				)
-			)
-		);
-	}
-
-	$filtered = wp_kses_bad_protocol( $url, array( 'http', 'https', 'ssl' ) );
-
-	if ( $filtered === '' ) {
-		throw new \InvalidArgumentException(
-			esc_html(
-				sprintf(
-					/* translators: %s: The URL that failed validation. */
-					__( 'The URL "%s" contains an invalid protocol', 'wp-crontrol' ),
-					$url,
-				)
+		throw new InvalidURLException(
+			sprintf(
+				/* translators: %s: The URL that failed validation. */
+				__( 'The URL "%s" is not allowed', 'wp-crontrol' ),
+				$url,
 			)
 		);
 	}
