@@ -42,9 +42,12 @@ abstract class Event {
 	/**
 	 * The arguments to pass to the hook's callback function.
 	 *
-	 * @var mixed[]
+	 * Note: This should normally be an array, but may contain other types if
+	 * the cron data is corrupted or invalid. Check the has_invalid_args() method.
+	 *
+	 * @var mixed[]|mixed
 	 */
-	public array $args;
+	public $args;
 
 	/**
 	 * The schedule name or null for one-time events.
@@ -61,6 +64,11 @@ abstract class Event {
 	public $interval;
 
 	/**
+	 * Whether this event has invalid (non-array) args.
+	 */
+	public bool $has_invalid_args = false;
+
+	/**
 	 * Constructor.
 	 *
 	 * @param string      $hook The hook name of the cron event.
@@ -70,13 +78,16 @@ abstract class Event {
 	 * @param string|null $schedule The schedule name or null for one-time events.
 	 * @param int|null    $interval The interval time in seconds for the schedule. Only present for recurring events.
 	 */
-	protected function __construct( string $hook, int $timestamp, string $sig, array $args, ?string $schedule, ?int $interval ) {
+	protected function __construct( string $hook, int $timestamp, string $sig, $args, ?string $schedule, ?int $interval ) {
 		$this->hook = $hook;
 		$this->timestamp = $timestamp;
 		$this->sig = $sig;
 		$this->args = $args;
 		$this->schedule = $schedule;
 		$this->interval = $interval;
+		// Args should be an array but corrupted or invalid cron data may contain other types.
+		// @phpstan-ignore function.alreadyNarrowedType
+		$this->has_invalid_args = ! is_array( $args );
 	}
 
 	/**
@@ -96,7 +107,7 @@ abstract class Event {
 	 *   (CoreCronEvent|StandardEvent)
 	 * )
 	 */
-	public static function create( string $hook, int $timestamp, string $sig, array $args, ?string $schedule, ?int $interval ): self {
+	public static function create( string $hook, int $timestamp, string $sig, $args, ?string $schedule, ?int $interval ): self {
 		if ( PHPCronEvent::HOOK_NAME === $hook ) {
 			return new PHPCronEvent( $hook, $timestamp, $sig, $args, $schedule, $interval );
 		}
@@ -132,7 +143,7 @@ abstract class Event {
 	 * @param mixed[] $args The arguments to pass to the hook's callback function.
 	 * @return self The appropriate Event instance set to run immediately.
 	 */
-	public static function create_immediate( string $hook, array $args = array() ): self {
+	public static function create_immediate( string $hook, $args = array() ): self {
 		return self::create( $hook, 1, '', $args, null, null );
 	}
 
@@ -226,7 +237,14 @@ abstract class Event {
 	 * Check if this event has any errors (syntax errors, URL errors, or integrity failures).
 	 */
 	public function has_error(): bool {
-		return false;
+		return $this->has_invalid_args;
+	}
+
+	/**
+	 * Check if this event has invalid (non-array) args.
+	 */
+	public function has_invalid_args(): bool {
+		return $this->has_invalid_args;
 	}
 
 	/**

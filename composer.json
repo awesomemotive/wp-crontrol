@@ -1,6 +1,6 @@
 {
 	"name": "johnbillion/wp-crontrol",
-	"description": "Take control of the cron events on your WordPress website",
+	"description": "Take control of the cron events on your WordPress website or WooCommerce store",
 	"homepage": "https://wp-crontrol.com",
 	"license": "GPL-2.0-or-later",
 	"type": "wordpress-plugin",
@@ -26,7 +26,7 @@
 		}
 	},
 	"require-dev": {
-		"johnbillion/plugin-infrastructure": "2.5.1",
+		"johnbillion/plugin-infrastructure": "2.9.1",
 		"johnbillion/wp-compat": "1.4.0",
 		"php-stubs/wordpress-stubs": "6.9.0",
 		"phpcompatibility/phpcompatibility-wp": "2.1.8",

@@ -8,8 +8,6 @@ on:
       - 'trunk'
     paths:
       - '.github/workflows/coding-standards.yml'
-      - '**.css'
-      - '**.js'
       - '**.php'
       - 'composer.json'
       - 'phpcs.xml.dist'
@@ -18,8 +16,6 @@ on:
       - '**'
     paths:
       - '.github/workflows/coding-standards.yml'
-      - '**.css'
-      - '**.js'
       - '**.php'
       - 'composer.json'
       - 'phpcs.xml.dist'
@@ -32,7 +28,7 @@ jobs:
     name: ${{ matrix.label }}
     permissions:
       contents: read
-    uses: johnbillion/plugin-infrastructure/.github/workflows/reusable-coding-standards.yml@9203bb0c5423a9a4b395ff5ffd093ba3714d723f # 2.5.1
+    uses: johnbillion/plugin-infrastructure/.github/workflows/reusable-coding-standards.yml@cc47e37177c694e00b901a5dc89fda5644bc550f # 2.9.1
     strategy:
       matrix:
         label:

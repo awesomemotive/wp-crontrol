@@ -396,4 +396,33 @@ class EventTest extends Test {
 		self::assertInstanceOf( StandardEvent::class, $found_event );
 		self::assertSame( array(), $found_event->args );
 	}
+
+	/**
+	 * @dataProvider dataInvalidArgs
+	 * @param mixed $args The args value to test.
+	 * @param bool $is_invalid Whether the args should be marked as invalid.
+	 */
+	public function testArgsValidity( $args, bool $is_invalid ): void {
+		$event = Event::create( 'test_args_validity', time() + 3600, 'test_sig', $args, null, null );
+
+		self::assertInstanceOf( StandardEvent::class, $event );
+		self::assertSame( $args, $event->args );
+		self::assertSame( $is_invalid, $event->has_invalid_args() );
+		self::assertSame( $is_invalid, $event->has_error() );
+	}
+
+	/**
+	 * @return array<string, array{mixed, bool}>
+	 */
+	public static function dataInvalidArgs(): array {
+		return array(
+			'string' => array( 'this is a string', true ),
+			'null' => array( null, true ),
+			'integer' => array( 42, true ),
+			'bool false' => array( false, true ),
+			'bool true' => array( true, true ),
+			'empty array' => array( array(), false ),
+			'array with values' => array( array( 'key' => 'value' ), false ),
+		);
+	}
 }

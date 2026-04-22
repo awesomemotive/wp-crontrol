@@ -18,20 +18,19 @@ permissions: {}
 jobs:
   deploy:
     name: Deploy Tag
-    uses: johnbillion/plugin-infrastructure/.github/workflows/reusable-deploy-tag.yml@9203bb0c5423a9a4b395ff5ffd093ba3714d723f # 2.5.1
+    if: github.event_name == 'workflow_dispatch' || github.event.release.prerelease == false
+    uses: johnbillion/plugin-infrastructure/.github/workflows/reusable-deploy-tag.yml@cc47e37177c694e00b901a5dc89fda5644bc550f # 2.9.1
     permissions:
-      contents: read
+      contents: write
       issues: write
+      pull-requests: write
       attestations: write
       id-token: write
     with:
-      deploy: ${{ github.event_name != 'workflow_dispatch' }}
+      deploy: true
       plugin: wp-crontrol
       readme: readme.txt
       version: ${{ github.event_name != 'workflow_dispatch' && github.event.release.tag_name || github.event.inputs.version }}
       username: johnbillion
-      did: did:plc:kjnlj6j6hvasaxc6rchd3pnu
-      fair-path: .did/fair.json
     secrets:
       WPORG_SVN_PASSWORD: ${{ secrets.WPORG_SVN_PASSWORD }}
-      FAIR_VERIFICATION_KEY: ${{ secrets.FAIR_VERIFICATION_KEY }}

@@ -1,21 +1,21 @@
 {
 	"name": "wp-crontrol",
-	"version": "1.20.0",
-	"description": "Take control of the cron events on your WordPress website",
+	"version": "1.21.0",
+	"description": "Take control of the cron events on your WordPress website or WooCommerce store",
 	"license": "GPL-2.0-or-later",
 	"private": true,
 	"author": "John Blackbourn",
 	"repository": "johnbillion/wp-crontrol",
 	"homepage": "https://wp-crontrol.com",
 	"engines": {
-		"node": ">=20"
+		"node": ">=24"
 	},
 	"devDependencies": {
-		"@johnbillion/plugin-infrastructure": "2.5.1",
+		"@johnbillion/plugin-infrastructure": "2.9.1",
 		"@jsdevtools/version-bump-prompt": "6.1.0",
 		"@playwright/test": "^1.55.0",
 		"@types/node": "^24.3.0",
-		"sharp-cli": "^4.0.0",
+		"sharp-cli": "^5.2.0",
 		"typescript": "^5.9.2"
 	},
 	"scripts": {

@@ -5,8 +5,10 @@ include:
 
 services:
   httpbin:
-    image: mccutchen/go-httpbin:latest
+    image: mccutchen/go-httpbin@sha256:b1620821b6ff191d911629f87a720b88df5397c2554045f1cfb1ffde17c9b898 # v2.20.0
     container_name: ${COMPOSE_PROJECT_NAME}-httpbin
     restart: always
+    networks:
+      - plugin-test-network
     environment:
       PORT: 80

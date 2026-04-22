@@ -3,11 +3,11 @@
 Contributors: johnbillion, scompt
 Tags: cron, wp-cron, crontrol, debug, woocommerce
 Tested up to: 6.9
-Stable tag: 1.20.0
+Stable tag: 1.21.0
 License: GPL v2 or later
 Donate link: https://github.com/sponsors/johnbillion
 
-WP Crontrol enables you to take control of the cron events on your WordPress website.
+WP Crontrol enables you to take control of the cron events on your WordPress website or WooCommerce store.
 
 ## Description
 
@@ -58,6 +58,15 @@ I maintain several other plugins for developers. Check them out:
 
 * [Query Monitor](https://wordpress.org/plugins/query-monitor/) is the developer tools panel for WordPress.
 * [User Switching](https://wordpress.org/plugins/user-switching/) provides instant switching between user accounts in WordPress.
+
+### Thanks
+
+The time that I spend maintaining this plugin and others is in part sponsored by:
+
+* [Automattic](https://automattic.com/)
+* [ServMask](https://servmask.com/)
+* [WP Staging](https://wp-staging.com/)
+* [All my kind sponsors on GitHub](https://github.com/sponsors/johnbillion)
 
 ### Privacy Statement
 
@@ -199,7 +208,9 @@ The cron commands which were previously included in WP Crontrol are now part of 
 
 ### How can I report a security bug?
 
-[You can report security bugs through the official WP Crontrol Vulnerability Disclosure Program on Patchstack](https://patchstack.com/database/vdp/wp-crontrol). The Patchstack team helps validate, triage, and handle any security vulnerabilities.
+You can submit a private security vulnerability report to WP Crontrol via [the Security tab on the GitHub repo](https://github.com/johnbillion/wp-crontrol/security). The GitHub Security Advisory process facilitates private collaboration on security issues. You'll receive credit for a valid report and a CVE if necessary.
+
+Do not report security issues on the WordPress.org support forums or via email. Thank you.
 
 ### Who took the photo in the plugin header image?
 

@@ -1654,7 +1654,13 @@ function show_cron_form( $editing ) {
 		$other_fields .= sprintf( '<input name="crontrol_original_next_run_utc" type="hidden" value="%s" />',
 			esc_attr( (string) $existing->timestamp )
 		);
-		if ( ! empty( $existing->args ) ) {
+		if ( $existing->has_invalid_args() ) {
+			$display_args = wp_json_encode( $existing->args );
+
+			if ( false === $display_args ) {
+				$display_args = var_export( $existing->args, true );
+			}
+		} elseif ( $existing->args !== [] ) {
 			$display_args = wp_json_encode( $existing->args );
 
 			if ( false === $display_args ) {
@@ -1908,6 +1914,19 @@ function show_cron_form( $editing ) {
 							</label>
 						</th>
 						<td>
+							<?php
+							if ( $editing && $existing->has_invalid_args() ) {
+								printf(
+									'<div class="notice notice-error inline"><p>%1$s</p><p>%2$s</p></div>',
+									esc_html__( 'This event has invalid arguments and will not run correctly.', 'wp-crontrol' ),
+									sprintf(
+										/* translators: %s: The PHP type of the invalid value */
+										esc_html__( 'Arguments should be an array but %s was provided. The event will likely fail with a PHP error when it attempts to run.', 'wp-crontrol' ),
+										esc_html( gettype( $existing->args ) )
+									)
+								);
+							}
+							?>
 							<input type="text" autocorrect="off" autocapitalize="off" spellcheck="false" class="regular-text code" id="crontrol_args" name="crontrol_args" value="<?php echo esc_attr( $display_args ); ?>" aria-describedby="crontrol_args_description"/>
 							<?php do_action( 'crontrol/manage/args', $existing ); ?>
 							<p class="description" id="crontrol_args_description">

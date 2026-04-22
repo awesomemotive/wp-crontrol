@@ -26,7 +26,3 @@ parameters:
 	ignoreErrors:
 		-
 			message: '#^Call to function method_exists\(\) with ''\\\\QM_Util'' and ''populate_callback'' will always evaluate to true\.$#'
-		-
-			# We can't guarantee that args from custom events are a list
-			message: '#^Parameter \#3 \$args of function wp_unschedule_event expects list<mixed>, array<mixed> given\.$#'
-			path: src/event.php

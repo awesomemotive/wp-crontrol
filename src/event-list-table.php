@@ -727,7 +727,14 @@ class Table extends \WP_List_Table {
 			);
 		}
 
-		if ( ! empty( $event->args ) ) {
+		if ( $event->has_invalid_args() ) {
+			$output .= sprintf(
+				'<br><span class="status-crontrol-error"><span class="dashicons dashicons-warning" aria-hidden="true"></span> %s</span>',
+				esc_html__( 'This event has invalid arguments and will not run correctly.', 'wp-crontrol' )
+			);
+		}
+
+		if ( $event->args !== [] ) {
 			$output .= sprintf(
 				'<br><details><summary>%s</summary><pre>%s</pre></details>',
 				esc_html__( 'View arguments', 'wp-crontrol' ),
