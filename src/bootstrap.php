@@ -1145,7 +1145,7 @@ function plugin_action_links( $actions ) {
 		'crontrol-logs' => sprintf(
 			'<a href="%s">%s</a>',
 			esc_url( admin_url( 'tools.php?page=wp-crontrol-logs' ) ),
-			esc_html__( 'Logs', 'wp-crontrol' )
+			esc_html__( 'Cron Logs', 'wp-crontrol' )
 		),
 		'crontrol-help' => sprintf(
 			'<a href="%s">%s</a>',
