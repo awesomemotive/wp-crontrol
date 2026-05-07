@@ -2312,12 +2312,12 @@ function do_tabs() {
 
 	?>
 	<div id="crontrol-header">
-		<nav class="nav-tab-wrapper">
+		<nav class="nav-tab-wrapper" aria-label="<?php echo esc_attr( __( 'Secondary menu', 'wp-crontrol' ) ); ?>">
 			<?php
 			foreach ( $links as $id => $link ) {
 				if ( ! empty( $tabs[ $id ] ) ) {
 					printf(
-						'<a href="%1$s" class="nav-tab nav-tab-active" id="crontrol_tab_%2$s">%3$s</a>',
+						'<a href="%1$s" class="nav-tab nav-tab-active" aria-current="page" id="crontrol_tab_%2$s">%3$s</a>',
 						esc_url( $link[0] ),
 						esc_attr( $id ),
 						esc_html( $link[1] )
