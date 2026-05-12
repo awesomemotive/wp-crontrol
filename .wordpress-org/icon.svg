@@ -1,14 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-	<defs>
-		<linearGradient id="grad" x1="0%" y1="0%" x2="120%" y2="70%">
-			<stop offset="30%" style="stop-color:#0073AA;stop-opacity:1" />
-			<stop offset="100%" style="stop-color:#0093AA;stop-opacity:1" />
-		</linearGradient>
-	</defs>
 	<rect x="0" fill="none" width="20" height="20" />
 	<circle cx="50%" cy="50%" r="9" fill="#fff" />
 	<g>
-		<path fill="url(#grad)"
+		<path fill="var(--wp-admin-theme-color, #3858e9)"
 			d="M10 2c4.42 0 8 3.58 8 8s-3.58 8-8 8-8-3.58-8-8 3.58-8 8-8zm0 14c3.31 0 6-2.69 6-6s-2.69-6-6-6-6 2.69-6 6 2.69 6 6 6zm-.71-5.29c.07.05.14.1.23.15l-.02.02L14 13l-3.03-3.19L10 5l-.97 4.81h.01c0 .02-.01.05-.02.09S9 9.97 9 10c0 .28.1.52.29.71z" />
 	</g>
 </svg>

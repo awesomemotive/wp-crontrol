@@ -76,6 +76,10 @@ WP Crontrol is private by default and always will be. It does not send data to a
 
 WP Crontrol aims to be fully accessible to all of its users. [WP Crontrol's full accessibility statement can be found here](https://wp-crontrol.com/accessibility/).
 
+### Legal
+
+Crontrol® is a registered trademark of Clever Things For The Web Limited.
+
 ## Frequently Asked Questions
 
 ### Does this plugin work with PHP 8?

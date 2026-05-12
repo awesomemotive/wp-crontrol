@@ -67,3 +67,7 @@ WP Crontrol aims to be fully accessible to all of its users. [WP Crontrol's full
 2. New cron events can be added<br>![](.wordpress-org/screenshot-2.png)
 
 3. New cron schedules can be added, giving plugin developers more options when scheduling events<br>![](.wordpress-org/screenshot-3.png)
+
+## Legal
+
+Crontrol® is a registered trademark of Clever Things For The Web Limited.
