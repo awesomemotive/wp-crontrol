@@ -2258,10 +2258,10 @@ function admin_logs_page() {
 				<div class="crontrol-callout-foreground">
 					<div>
 						<div class="crontrol-logo" aria-hidden="true">
-							<img src="<?php echo esc_url( plugins_url( '.wordpress-org/icon.svg', PLUGIN_FILE ) ); ?>" alt="">
+							<?php readfile( plugin_dir_path( PLUGIN_FILE ) . '.wordpress-org/icon.svg' ); ?>
 						</div>
 						<h2><a href="https://wp-crontrol.com/pro/">Cron event logging is a brand new feature available in WP Crontrol Pro</a></h2>
-						<h3>You have no idea what the scheduled cron events on your site are doing.<br>WP Crontrol Pro will log them and show you.</h3>
+						<h3>You have no idea what the scheduled cron events on your site are doing.<br>WP Crontrol Pro logs them and shows you.</h3>
 						<ul>
 							<li><span class="dashicons dashicons-yes" aria-hidden="true"></span> See when events run and monitor performance metrics</li>
 							<li><span class="dashicons dashicons-yes" aria-hidden="true"></span> Save hours or days of manual investigation</li>

@@ -190,8 +190,6 @@ input[type="time"][step="1"] {
 }
 
 .crontrol-callout-foreground .crontrol-logo {
-	border: 2px solid var(--wp-admin-theme-color, #2271b1 );
-	border-radius: 50%;
 	position: absolute;
 	top: -52px;
 	left: calc(50% - 52px);
