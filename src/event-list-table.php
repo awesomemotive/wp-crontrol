@@ -101,11 +101,17 @@ class Table extends \WP_List_Table {
 			add_action(
 				'admin_notices',
 				function () {
-					printf(
-						'<div id="crontrol-integrity-failures-message" class="notice notice-error"><p>%1$s</p><p><a href="%2$s">%3$s</a></p></div>',
-						esc_html__( 'One or more of your cron events needs to be checked for integrity. These events will not run until you check and re-save them.', 'wp-crontrol' ),
-						'https://wp-crontrol.com/help/check-cron-events/',
-						esc_html__( 'Read what to do', 'wp-crontrol' )
+					wp_admin_notice(
+						sprintf(
+							'%1$s<br><br><a href="%2$s">%3$s</a>',
+							esc_html__( 'One or more of your cron events needs to be checked for integrity. These events will not run until you check and re-save them.', 'wp-crontrol' ),
+							'https://wp-crontrol.com/help/check-cron-events/',
+							esc_html__( 'Read what to do', 'wp-crontrol' )
+						),
+						array(
+							'id'   => 'crontrol-integrity-failures-message',
+							'type' => 'error',
+						)
 					);
 				}
 			);
@@ -209,6 +215,7 @@ class Table extends \WP_List_Table {
 		);
 
 		$filtered['duplicated'] = filter_duplicated( $events );
+		$filtered['woocommerce'] = filter_woocommerce( $events );
 
 		/**
 		 * Filters the available filtered events on the cron event listing screen.
@@ -304,14 +311,15 @@ class Table extends \WP_List_Table {
 		$hooks_type = ( ! empty( $_GET['crontrol_hooks_type'] ) ? $_GET['crontrol_hooks_type'] : 'all' );
 
 		$types = array(
-			'all'        => __( 'All events', 'wp-crontrol' ),
-			'noaction'   => __( 'Events with no action', 'wp-crontrol' ),
-			'core'       => __( 'WordPress core events', 'wp-crontrol' ),
-			'custom'     => __( 'Custom events', 'wp-crontrol' ),
-			'php'        => __( 'PHP events', 'wp-crontrol' ),
-			'url'        => __( 'URL events', 'wp-crontrol' ),
-			'paused'     => __( 'Paused events', 'wp-crontrol' ),
-			'duplicated' => __( 'Duplicated events', 'wp-crontrol' ),
+			'all'         => __( 'All events', 'wp-crontrol' ),
+			'noaction'    => __( 'Events with no action', 'wp-crontrol' ),
+			'woocommerce' => __( 'WooCommerce events', 'wp-crontrol' ),
+			'core'        => __( 'WordPress core events', 'wp-crontrol' ),
+			'custom'      => __( 'Custom events', 'wp-crontrol' ),
+			'php'         => __( 'PHP events', 'wp-crontrol' ),
+			'url'         => __( 'URL events', 'wp-crontrol' ),
+			'paused'      => __( 'Paused events', 'wp-crontrol' ),
+			'duplicated'  => __( 'Duplicated events', 'wp-crontrol' ),
 		);
 
 		/**
@@ -782,13 +790,17 @@ class Table extends \WP_List_Table {
 		if ( $event instanceof CrontrolEvent ) {
 			return 'WP Crontrol';
 		} elseif ( ! empty( $hook_callbacks ) ) {
+			if ( count( $hook_callbacks ) === 1 ) {
+				return \Crontrol\output_callback( $hook_callbacks[0] );
+			}
+
 			$callbacks = array();
 
 			foreach ( $hook_callbacks as $callback ) {
 				$callbacks[] = \Crontrol\output_callback( $callback );
 			}
 
-			return implode( '<br>', $callbacks ); // WPCS:: XSS ok.
+			return '<ol><li>' . implode( '</li><li>', $callbacks ) . '</li>'; // WPCS:: XSS ok.
 		} else {
 			$help = sprintf(
 				'<a href="%s">%s</a>',

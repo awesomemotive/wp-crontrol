@@ -66,6 +66,10 @@ table.wp-list-table {
 	display: none;
 }
 
+.wp-list-table .column-crontrol_actions ol {
+	margin: 0 0 0 1.2em;
+}
+
 .status-crontrol-warning,
 .wp-list-table tr.crontrol-no-action td.column-crontrol_status,
 .wp-list-table tr.crontrol-warning td.column-crontrol_status {

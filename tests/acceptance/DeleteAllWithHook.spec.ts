@@ -1,4 +1,4 @@
-import { test, expect } from './utils/test-setup';
+import { test, expect } from './utils/test-setup.js';
 
 test.describe( 'Deleting All Events with a Hook', () => {
 	test.beforeAll( async ( { globalUtils } ) => {

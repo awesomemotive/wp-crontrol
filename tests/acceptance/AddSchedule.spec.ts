@@ -1,4 +1,4 @@
-import { test, expect } from './utils/test-setup';
+import { test, expect } from './utils/test-setup.js';
 
 test.describe( 'Adding Cron Schedules', () => {
 	test.beforeAll( async ( { globalUtils } ) => {

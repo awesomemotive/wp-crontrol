@@ -1221,12 +1221,15 @@ function admin_options_page() {
 		$hook    = wp_unslash( $_GET['crontrol_name'] );
 		$message = intval( $_GET['crontrol_message'] );
 
-		printf(
-			'<div id="crontrol-message" class="notice notice-%1$s is-dismissible"><p>%2$s</p></div>',
-			esc_attr( $messages[ $message ][1] ),
+		wp_admin_notice(
 			sprintf(
 				esc_html( $messages[ $message ][0] ),
 				'<strong>' . esc_html( $hook ) . '</strong>'
+			),
+			array(
+				'id'          => 'crontrol-message',
+				'type'        => $messages[ $message ][1],
+				'dismissible' => true,
 			)
 		);
 	}
@@ -1328,8 +1331,6 @@ function maybe_clear_doing_cron( $pre ) {
  * @return true|WP_Error Boolean true if the cron spawner is working as expected, or a `WP_Error` object if not.
  */
 function test_cron_spawn( $cache = true ) {
-	global $wp_version;
-
 	$cron_runner_plugins = array(
 		'\HM\Cavalcade\Plugin\Job'         => 'Cavalcade',
 		'\Automattic\WP\Cron_Control\Main' => 'Cron Control',
@@ -1417,46 +1418,48 @@ function show_cron_status() {
 	}
 
 	if ( 'UTC' !== date_default_timezone_get() ) {
-		?>
-		<div id="crontrol-timezone-warning" class="notice notice-warning">
-			<?php
-			printf(
-				'<p>%1$s</p><p><a href="%2$s">%3$s</a></p>',
+		wp_admin_notice(
+			sprintf(
+				'%1$s<br><br><a href="%2$s">%3$s</a>',
 				esc_html__( 'PHP default timezone is not set to UTC. This may cause issues with cron event timings.', 'wp-crontrol' ),
 				'https://wp-crontrol.com/help/php-default-timezone/',
 				esc_html__( 'More information', 'wp-crontrol' )
-			);
-			?>
-		</div>
-		<?php
+			),
+			array(
+				'id'   => 'crontrol-timezone-warning',
+				'type' => 'warning',
+			)
+		);
 	}
 
 	$status = test_cron_spawn();
 
 	if ( is_wp_error( $status ) ) {
 		if ( 'crontrol_info' === $status->get_error_code() ) {
-			?>
-			<div id="crontrol-status-notice" class="notice notice-info">
-				<p><?php echo esc_html( $status->get_error_message() ); ?></p>
-			</div>
-			<?php
+			wp_admin_notice(
+				esc_html( $status->get_error_message() ),
+				array(
+					'id'   => 'crontrol-status-notice',
+					'type' => 'info',
+				)
+			);
 		} else {
-			?>
-			<div id="crontrol-status-error" class="notice notice-error">
-				<?php
-				printf(
-					'<p>%1$s</p><p><a href="%2$s">%3$s</a></p>',
+			wp_admin_notice(
+				sprintf(
+					'%1$s<br><br><a href="%2$s">%3$s</a>',
 					sprintf(
 						/* translators: %s: Error message text. */
 						esc_html__( 'There was a problem spawning a call to the WP-Cron system on your site. This means WP-Cron events on your site may not work. The problem was: %s', 'wp-crontrol' ),
-						'</p><p><strong>' . esc_html( $status->get_error_message() ) . '</strong>'
+						'<br><br><strong>' . esc_html( $status->get_error_message() ) . '</strong>'
 					),
 					'https://wp-crontrol.com/help/problems-spawning-wp-cron/',
 					esc_html__( 'More information', 'wp-crontrol' )
-				);
-				?>
-			</div>
-			<?php
+				),
+				array(
+					'id'   => 'crontrol-status-error',
+					'type' => 'error',
+				)
+			);
 		}
 	}
 }
@@ -1605,19 +1608,16 @@ function show_cron_form( $editing ) {
 			<div id="crontrol_form" class="wrap narrow">
 				<?php do_tabs(); ?>
 
-				<div id="crontrol-event-not-found" class="notice notice-error">
-					<p>
-						<?php
-						printf(
+				<?php
+				wp_admin_notice(
+					sprintf(
+						'%1$s<br><br>%2$s',
+						sprintf(
 							/* translators: %s: The name of the cron event. */
 							esc_html__( 'The %s event you are trying to edit does not exist.', 'wp-crontrol' ),
 							'<b>' . esc_html( $edit_id ) . '</b>'
-						);
-						?>
-					</p>
-					<p>
-						<?php
-						echo wp_kses(
+						),
+						wp_kses(
 							sprintf(
 								/* translators: 1: The time since the event was scheduled, 2: The URL to search for the event. */
 								__( 'The event probably ran %1$s ago. <a href="%2$s">Click here to see if it was rescheduled</a>.', 'wp-crontrol' ),
@@ -1629,10 +1629,14 @@ function show_cron_form( $editing ) {
 									'href' => array(),
 								),
 							)
-						);
-						?>
-					</p>
-				</div>
+						)
+					),
+					array(
+						'id'   => 'crontrol-event-not-found',
+						'type' => 'error',
+					)
+				);
+				?>
 			</div>
 			<?php
 			return;
@@ -1797,11 +1801,17 @@ function show_cron_form( $editing ) {
 						<td>
 							<?php
 							if ( $is_editing_url && $existing->integrity_failed() ) {
-								printf(
-									'<div class="notice notice-error inline"><p>%1$s</p><p><a href="%2$s">%3$s</a></p></div>',
-									esc_html__( 'The URL in this event needs to be checked for integrity. This event will not run until you re-save it.', 'wp-crontrol' ),
-									'https://wp-crontrol.com/help/check-cron-events/',
-									esc_html__( 'Read what to do', 'wp-crontrol' )
+								wp_admin_notice(
+									sprintf(
+										'%1$s<br><br><a href="%2$s">%3$s</a>',
+										esc_html__( 'The URL in this event needs to be checked for integrity. This event will not run until you re-save it.', 'wp-crontrol' ),
+										'https://wp-crontrol.com/help/check-cron-events/',
+										esc_html__( 'Read what to do', 'wp-crontrol' )
+									),
+									array(
+										'type'               => 'error',
+										'additional_classes' => array( 'inline' ),
+									)
 								);
 							}
 							?>
@@ -1850,11 +1860,17 @@ function show_cron_form( $editing ) {
 						<td>
 							<?php
 							if ( $is_editing_php && $existing->integrity_failed() ) {
-								printf(
-									'<div class="notice notice-error inline"><p>%1$s</p><p><a href="%2$s">%3$s</a></p></div>',
-									esc_html__( 'The PHP code in this event needs to be checked for integrity. This event will not run until you re-save it.', 'wp-crontrol' ),
-									'https://wp-crontrol.com/help/check-cron-events/',
-									esc_html__( 'Read what to do', 'wp-crontrol' )
+								wp_admin_notice(
+									sprintf(
+										'%1$s<br><br><a href="%2$s">%3$s</a>',
+										esc_html__( 'The PHP code in this event needs to be checked for integrity. This event will not run until you re-save it.', 'wp-crontrol' ),
+										'https://wp-crontrol.com/help/check-cron-events/',
+										esc_html__( 'Read what to do', 'wp-crontrol' )
+									),
+									array(
+										'type'               => 'error',
+										'additional_classes' => array( 'inline' ),
+									)
 								);
 							}
 							?>
@@ -1916,13 +1932,19 @@ function show_cron_form( $editing ) {
 						<td>
 							<?php
 							if ( $editing && $existing->has_invalid_args() ) {
-								printf(
-									'<div class="notice notice-error inline"><p>%1$s</p><p>%2$s</p></div>',
-									esc_html__( 'This event has invalid arguments and will not run correctly.', 'wp-crontrol' ),
+								wp_admin_notice(
 									sprintf(
-										/* translators: %s: The PHP type of the invalid value */
-										esc_html__( 'Arguments should be an array but %s was provided. The event will likely fail with a PHP error when it attempts to run.', 'wp-crontrol' ),
-										esc_html( gettype( $existing->args ) )
+										'%1$s<br><br>%2$s',
+										esc_html__( 'This event has invalid arguments and will not run correctly.', 'wp-crontrol' ),
+										sprintf(
+											/* translators: %s: The PHP type of the invalid value */
+											esc_html__( 'Arguments should be an array but %s was provided. The event will likely fail with a PHP error when it attempts to run.', 'wp-crontrol' ),
+											esc_html( gettype( $existing->args ) )
+										)
+									),
+									array(
+										'type'               => 'error',
+										'additional_classes' => array( 'inline' ),
 									)
 								);
 							}
@@ -2126,7 +2148,6 @@ function admin_manage_page() {
 	if ( isset( $_GET['crontrol_name'], $_GET['crontrol_message'], $messages[ $_GET['crontrol_message'] ] ) ) {
 		$hook    = wp_unslash( $_GET['crontrol_name'] );
 		$message = intval( $_GET['crontrol_message'] );
-		$link    = '';
 
 		if ( MESSAGE_UNKNOWN_ERROR === $message ) {
 			$error = get_message();
@@ -2136,15 +2157,16 @@ function admin_manage_page() {
 			}
 		}
 
-		printf(
-			'<div id="crontrol-message" class="notice notice-%1$s is-dismissible"><p>%2$s%3$s</p></div>',
-			esc_attr( $messages[ $message ][1] ),
+		wp_admin_notice(
 			sprintf(
 				esc_html( $messages[ $message ][0] ),
 				'<strong>' . esc_html( $hook ) . '</strong>'
 			),
-			// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-			$link
+			array(
+				'id'          => 'crontrol-message',
+				'type'        => $messages[ $message ][1],
+				'dismissible' => true,
+			)
 		);
 	}
 

@@ -26,9 +26,9 @@
 		}
 	},
 	"require-dev": {
-		"johnbillion/plugin-infrastructure": "2.9.1",
+		"johnbillion/plugin-infrastructure": "2.9.4",
 		"johnbillion/wp-compat": "1.4.0",
-		"php-stubs/wordpress-stubs": "6.9.0",
+		"php-stubs/wordpress-stubs": "7.0.0 as 6.9.4",
 		"phpcompatibility/phpcompatibility-wp": "2.1.8",
 		"phpstan/phpstan": "2.1.33",
 		"szepeviktor/phpstan-wordpress": "2.0.3",
@@ -78,7 +78,7 @@
 			"phpcbf -nps --colors --report-code --report-summary --report-width=80 --basepath=./ ."
 		],
 		"test:phpstan": [
-			"phpstan analyze -v --memory-limit=1024M"
+			"phpstan analyze -v --memory-limit=2G"
 		],
 		"test:start": [
 			"tests-start"

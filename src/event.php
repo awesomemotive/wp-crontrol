@@ -416,6 +416,31 @@ function filter_duplicated( array $events ): array {
 }
 
 /**
+ * Filters events to include only those related to WooCommerce.
+ *
+ * @param array<string,Event> $events The list of all events.
+ * @return array<string,Event> Array of events related to WooCommerce.
+ */
+function filter_woocommerce( array $events ): array {
+	return array_filter(
+		$events,
+		function ( $event ): bool {
+			if ( str_starts_with( $event->hook, 'woocommerce_' ) || str_starts_with( $event->hook, 'wc_' ) ) {
+				return true;
+			}
+
+			foreach ( $event->get_callbacks() as $callback ) {
+				if ( isset( $callback['callback']['file'] ) && str_contains( $callback['callback']['file'], 'woocommerce' ) ) {
+					return true;
+				}
+			}
+
+			return false;
+		}
+	);
+}
+
+/**
  * Filters events by search term matching the hook name.
  *
  * @param array<string,Event> $events The list of all events.

@@ -1,8 +1,7 @@
 import { test as base, expect, Page } from '@playwright/test';
-import { CrontrolUtils } from './wp-crontrol';
-import { CrontrolGlobalUtils } from './wp-crontrol-global-utils';
-import * as fs from 'fs';
-import * as path from 'path';
+import { CrontrolUtils } from './wp-crontrol.js';
+import { CrontrolGlobalUtils } from './wp-crontrol-global-utils.js';
+import { captureHtmlOnFailure } from '@johnbillion/plugin-infrastructure/acceptance';
 
 class Admin {
 	private page: Page;
@@ -39,19 +38,6 @@ export const test = base.extend<CrontrolFixtures>( {
 	},
 } );
 
-// Add automatic HTML capture on failure
-test.afterEach(async ({ page }, testInfo) => {
-	if (testInfo.status !== 'passed') {
-		// Capture the page HTML content
-		const html = await page.content();
-		const htmlPath = path.join(testInfo.outputDir, 'page-content.html');
-		fs.writeFileSync(htmlPath, html, 'utf8');
-		testInfo.attachments.push({
-			name: 'page-html',
-			path: htmlPath,
-			contentType: 'text/html',
-		});
-	}
-});
+captureHtmlOnFailure( test );
 
 export { expect };

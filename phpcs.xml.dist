@@ -2,7 +2,7 @@
 <ruleset name="WP Crontrol">
 
 	<config name="testVersion" value="7.4-"/>
-	<config name="minimum_wp_version" value="6.4"/>
+	<config name="minimum_wp_version" value="6.5"/>
 	<arg name="extensions" value="php"/>
 	<arg name="cache" value="tests/cache/phpcs.json"/>
 
