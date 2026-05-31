@@ -57,7 +57,7 @@ function init_hooks() {
 
 	add_action( 'init',                               __NAMESPACE__ . '\action_init' );
 	add_action( 'admin_init',                         __NAMESPACE__ . '\action_handle_posts' );
-	add_action( 'admin_menu',                         __NAMESPACE__ . '\action_admin_menu' );
+	add_action( 'admin_menu',                         __NAMESPACE__ . '\action_admin_menu', 98 );
 	add_filter( "plugin_action_links_{$plugin_file}", __NAMESPACE__ . '\plugin_action_links' );
 	add_filter( "network_admin_plugin_action_links_{$plugin_file}", __NAMESPACE__ . '\network_plugin_action_links' );
 	add_filter( 'removable_query_args',               __NAMESPACE__ . '\filter_removable_query_args' );
