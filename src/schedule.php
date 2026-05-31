@@ -108,6 +108,7 @@ function dropdown( ?string $current = null ) {
 	?>
 	<select class="postform" name="crontrol_schedule" id="crontrol_schedule" required>
 	<option <?php selected( $current, '_oneoff' ); ?> value="_oneoff"><?php esc_html_e( 'Non-repeating', 'wp-crontrol' ); ?></option>
+	<hr/>
 	<?php foreach ( $schedules as $schedule ) { ?>
 		<option <?php selected( $current, $schedule->name ); ?> value="<?php echo esc_attr( $schedule->name ); ?>">
 			<?php

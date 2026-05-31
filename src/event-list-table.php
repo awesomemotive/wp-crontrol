@@ -239,19 +239,17 @@ class Table extends \WP_List_Table {
 	 */
 	#[\Override]
 	public function get_columns() {
-		return array(
+		$cols = array(
 			'cb'                  => '<input type="checkbox" />',
 			'crontrol_hook'       => esc_html__( 'Hook', 'wp-crontrol' ),
-			'crontrol_next'       => esc_html(
-				sprintf(
-					/* translators: %s: UTC offset */
-					__( 'Next Run (%s)', 'wp-crontrol' ),
-					\Crontrol\get_timezone_location()
-				),
-			),
+			'crontrol_next'       => esc_html__( 'Next Run', 'wp-crontrol' ),
 			'crontrol_schedule'   => esc_html_x( 'Schedule', 'noun', 'wp-crontrol' ),
 			'crontrol_actions'    => esc_html__( 'Action', 'wp-crontrol' ),
 		);
+
+		$cols = apply_filters( 'crontrol/event_table_columns', $cols );
+
+		return $cols;
 	}
 
 	/**
@@ -636,6 +634,28 @@ class Table extends \WP_List_Table {
 			esc_attr( rawurlencode( $event->hook ) ),
 			esc_attr( $event->sig )
 		);
+	}
+
+	/**
+	 * Returns the output for a custom column added via the `crontrol/event_table_columns` filter.
+	 *
+	 * @param Event  $event       The cron event for the current row.
+	 * @param string $column_name The name of the column being rendered.
+	 * @return string The cell output.
+	 */
+	#[\Override]
+	protected function column_default( $event, $column_name ) {
+		/**
+		 * Filters the output for a custom column on the cron event list table.
+		 *
+		 * This allows the content of columns added via the `crontrol/event_table_columns`
+		 * filter to be populated. The dynamic portion of the hook name, `$column_name`,
+		 * refers to the name of the column being rendered.
+		 *
+		 * @param string $output The column output. Default empty string.
+		 * @param Event  $event  The cron event for the current row.
+		 */
+		return (string) apply_filters( "crontrol/event_table_column_output_{$column_name}", '', $event );
 	}
 
 	/**

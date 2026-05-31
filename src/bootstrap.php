@@ -2157,9 +2157,20 @@ function admin_manage_page() {
 			}
 		}
 
+		$messages = apply_filters( 'crontrol/event_admin_messages', $messages, $hook, $message );
+
 		wp_admin_notice(
 			sprintf(
-				esc_html( $messages[ $message ][0] ),
+				wp_kses(
+					$messages[ $message ][0],
+					array(
+						'a' => array(
+							'href' => true,
+						),
+						'br' => array(
+						),
+					)
+				),
 				'<strong>' . esc_html( $hook ) . '</strong>'
 			),
 			array(
