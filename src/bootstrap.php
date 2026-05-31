@@ -2244,6 +2244,9 @@ function admin_logs_page() {
 	$table = new Logs\Table();
 	$table->prepare_items();
 	$pro_installed = file_exists( WP_PLUGIN_DIR . '/wp-crontrol-pro/wp-crontrol-pro.php' );
+
+	dismiss_pointer( 'wp-crontrol-logs' );
+
 	?>
 	<div class="wrap">
 		<?php do_tabs(); ?>
@@ -2350,6 +2353,41 @@ function mark_tab_seen( $id ) {
 	$seen[] = $id;
 
 	update_user_meta( $user_id, 'crontrol_seen_tabs', $seen );
+}
+
+/**
+ * Determines whether the given pointer has been dismissed by the current user.
+ *
+ * @param string $pointer The pointer ID.
+ * @return bool Whether the pointer has been dismissed.
+ */
+function is_pointer_dismissed( $pointer ) {
+	$dismissed = array_filter( explode( ',', (string) get_user_meta( get_current_user_id(), 'dismissed_wp_pointers', true ) ) );
+
+	return in_array( $pointer, $dismissed, true );
+}
+
+/**
+ * Marks the given pointer as dismissed for the current user.
+ *
+ * @param string $pointer The pointer ID.
+ * @return void
+ */
+function dismiss_pointer( $pointer ) {
+	$user_id = get_current_user_id();
+
+	if ( ! $user_id ) {
+		return;
+	}
+
+	if ( is_pointer_dismissed( $pointer ) ) {
+		return;
+	}
+
+	$dismissed   = array_filter( explode( ',', (string) get_user_meta( $user_id, 'dismissed_wp_pointers', true ) ) );
+	$dismissed[] = $pointer;
+
+	update_user_meta( $user_id, 'dismissed_wp_pointers', implode( ',', $dismissed ) );
 }
 
 /**
@@ -2721,18 +2759,13 @@ function setup_manage_page() {
 function enqueue_assets( $hook_suffix ) {
 	$tab = get_tab_states();
 
-	if ( ! array_filter( $tab ) ) {
-		return;
-	}
-
 	$css_deps = [
 		'dashicons',
 	];
 	$js_deps = [];
 
-	$dismissed_wp_pointers = explode( ',', (string) get_user_meta( get_current_user_id(), 'dismissed_wp_pointers', true ) );
 	$show_pointers = [
-		'logs' => $tab['events'] && ! in_array( 'wp-crontrol-logs', $dismissed_wp_pointers, true ),
+		'logs' => ( $tab['events'] || ( $hook_suffix === 'plugins.php' ) ) && ! is_pointer_dismissed( 'wp-crontrol-logs' ),
 	];
 	$vars = array(
 		'pointers' => [],
@@ -2749,7 +2782,7 @@ function enqueue_assets( $hook_suffix ) {
 			'lines' => array(
 				esc_js( sprintf(
 					/* translators: 1: Name of the add-on plugin. */
-					__( 'Cron events can now be logged with WP Crontrol Pro. ', 'wp-crontrol' ),
+					__( 'Cron events can now be logged each time they run with WP Crontrol Pro. ', 'wp-crontrol' ),
 					'WP Crontrol Pro'
 				) ),
 				sprintf(
@@ -2761,12 +2794,15 @@ function enqueue_assets( $hook_suffix ) {
 		];
 	}
 
-	wp_enqueue_style(
-		'wp-crontrol',
-		plugin_dir_url( PLUGIN_FILE ) . 'css/wp-crontrol.css',
-		$css_deps,
-		WP_CRONTROL_VERSION
-	);
+	if ( $hook_suffix !== 'plugins.php' ) {
+		wp_enqueue_style(
+			'wp-crontrol',
+			plugin_dir_url( PLUGIN_FILE ) . 'css/wp-crontrol.css',
+			$css_deps,
+			WP_CRONTROL_VERSION
+		);
+	}
+
 	wp_enqueue_script(
 		'wp-crontrol',
 		plugin_dir_url( PLUGIN_FILE ) . 'js/wp-crontrol.js',
