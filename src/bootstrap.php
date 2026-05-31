@@ -2431,6 +2431,7 @@ function do_tabs() {
 			foreach ( $links as $id => $link ) {
 				$is_active = ! empty( $tabs[ $id ] );
 				$is_new    = ! empty( $link[2] ) && ! in_array( $id, $seen_tabs, true );
+				$has_error = ! empty( $link[3] );
 				$label     = esc_html( $link[1] );
 
 				if ( $is_new ) {
@@ -2445,6 +2446,10 @@ function do_tabs() {
 							esc_html__( 'New', 'wp-crontrol' )
 						);
 					}
+				}
+
+				if ( $has_error ) {
+					$label .= ' <span class="status-crontrol-error"><span class="dashicons dashicons-warning" aria-hidden="true"></span></span>';
 				}
 
 				printf(
