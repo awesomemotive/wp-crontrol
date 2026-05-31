@@ -2312,6 +2312,47 @@ function get_tab_states() {
 }
 
 /**
+ * Returns the list of tab IDs that the current user has already seen.
+ *
+ * Used to determine whether a "New" pill should be displayed on a tab.
+ *
+ * @return array<int,string> Array of tab IDs.
+ */
+function get_seen_tabs() {
+	$seen = get_user_meta( get_current_user_id(), 'crontrol_seen_tabs', true );
+
+	if ( ! is_array( $seen ) ) {
+		$seen = array();
+	}
+
+	return $seen;
+}
+
+/**
+ * Marks the given tab as seen by the current user.
+ *
+ * @param string $id The tab ID.
+ * @return void
+ */
+function mark_tab_seen( $id ) {
+	$user_id = get_current_user_id();
+
+	if ( ! $user_id ) {
+		return;
+	}
+
+	$seen = get_seen_tabs();
+
+	if ( in_array( $id, $seen, true ) ) {
+		return;
+	}
+
+	$seen[] = $id;
+
+	update_user_meta( $user_id, 'crontrol_seen_tabs', $seen );
+}
+
+/**
  * Output the cron-related tabs if we're on a cron-related admin screen.
  *
  * @return void
@@ -2343,26 +2384,39 @@ function do_tabs() {
 
 	$links = apply_filters( 'crontrol/links', $links );
 
+	$seen_tabs = get_seen_tabs();
+
 	?>
 	<div id="crontrol-header">
 		<nav class="nav-tab-wrapper" aria-label="<?php echo esc_attr( __( 'Secondary menu', 'wp-crontrol' ) ); ?>">
 			<?php
 			foreach ( $links as $id => $link ) {
-				if ( ! empty( $tabs[ $id ] ) ) {
-					printf(
-						'<a href="%1$s" class="nav-tab nav-tab-active" aria-current="page" id="crontrol_tab_%2$s">%3$s</a>',
-						esc_url( $link[0] ),
-						esc_attr( $id ),
-						esc_html( $link[1] )
-					);
-				} else {
-					printf(
-						'<a href="%1$s" class="nav-tab" id="crontrol_tab_%2$s">%3$s</a>',
-						esc_url( $link[0] ),
-						esc_attr( $id ),
-						esc_html( $link[1] )
-					);
+				$is_active = ! empty( $tabs[ $id ] );
+				$is_new    = ! empty( $link[2] ) && ! in_array( $id, $seen_tabs, true );
+				$label     = esc_html( $link[1] );
+
+				if ( $is_new ) {
+					if ( $is_active ) {
+						// Mark the tab as seen once the user is viewing it.
+						add_action( 'admin_footer', static function () use ( $id ) {
+							mark_tab_seen( $id );
+						} );
+					} else {
+						$label .= sprintf(
+							' <span class="crontrol-tab-pill">%s</span>',
+							esc_html__( 'New', 'wp-crontrol' )
+						);
+					}
 				}
+
+				printf(
+					'<a href="%1$s" class="nav-tab%4$s"%5$s id="crontrol_tab_%2$s">%3$s</a>',
+					esc_url( $link[0] ),
+					esc_attr( $id ),
+					$label, // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- $label is escaped above.
+					$is_active ? ' nav-tab-active' : '',
+					$is_active ? ' aria-current="page"' : ''
+				);
 			}
 
 			if ( $tabs['add-event'] ) {
@@ -2689,7 +2743,7 @@ function enqueue_assets( $hook_suffix ) {
 		$js_deps[] = 'wp-pointer';
 	}
 
-	if ( $show_pointers['logs'] && ! defined( '\Crontrol\Pro\WP_CRONTROL_PRO_VERSION' ) ) {
+	if ( $show_pointers['logs'] ) {
 		$vars['pointers']['logs'] = [
 			'title' => esc_js( __( 'Cron event logs', 'wp-crontrol' ) ),
 			'lines' => array(
@@ -2721,10 +2775,8 @@ function enqueue_assets( $hook_suffix ) {
 		true
 	);
 
-	$vars = array(
-		'confirmDeleteEvent' => __( 'Are you sure you want to delete this event?', 'wp-crontrol' ),
-		'confirmDeleteHook' => __( 'Are you sure you want to delete all events with this hook?', 'wp-crontrol' ),
-	);
+	$vars['confirmDeleteEvent'] = __( 'Are you sure you want to delete this event?', 'wp-crontrol' );
+	$vars['confirmDeleteHook'] = __( 'Are you sure you want to delete all events with this hook?', 'wp-crontrol' );
 
 	if ( ! empty( $tab['add-event'] ) || ! empty( $tab['edit-event'] ) ) {
 		if ( current_user_can_edit_php_cron_events() ) {

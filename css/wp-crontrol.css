@@ -207,6 +207,20 @@ input[type="time"][step="1"] {
 	font-size: 1em;
 }
 
+.nav-tab .crontrol-tab-pill {
+	background: var(--wp-admin-theme-color, #2271b1 );
+	border-radius: 10px;
+	color: #fff;
+	display: inline-block;
+	font-size: 9px;
+	font-weight: 600;
+	line-height: 1.3;
+	margin-left: 4px;
+	padding: 2px 7px;
+	text-transform: uppercase;
+	vertical-align: text-top;
+}
+
 @keyframes rotator {
 	from {
 		transform: rotate( 0deg );
