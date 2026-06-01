@@ -16,6 +16,7 @@ use Crontrol\Exception\InvalidHashException;
 use Crontrol\Exception\UnexpectedHTTPCodeException;
 use Crontrol\Exception\HTTPFailedException;
 use Crontrol\Exception\UnknownScheduleException;
+use DateTimeImmutable;
 use DateTimeZone;
 use WP_Error;
 use Exception;
@@ -2743,6 +2744,70 @@ function interval( $since, bool $accurate = false ) {
 	}
 
 	return $output;
+}
+
+/**
+ * Returns an HTML `<time>` element displaying a UTC timestamp in the site's timezone.
+ *
+ * The time is displayed in a friendly format relative to the current day where possible, for
+ * example "Today at 3:00 pm", "Tomorrow at 9:00 am", or "Yesterday at 11:00 pm". Other dates are
+ * shown in full, for example "January 1st at 12:00 pm". If the timezone offset of the given time
+ * differs from the site's current offset, for example due to daylight saving time, the offset is
+ * appended to the time.
+ *
+ * @param int $timestamp A Unix timestamp in UTC.
+ * @return string An HTML `<time>` element.
+ */
+function time_element( int $timestamp ): string {
+	$time_format = 'g:i a';
+
+	$datetime_utc = gmdate( 'Y-m-d H:i:s', $timestamp );
+
+	$timezone_local  = wp_timezone();
+	$date_local      = get_date_from_gmt( $datetime_utc, 'Y-m-d' );
+	$today_local     = ( new DateTimeImmutable( 'now', $timezone_local ) )->format( 'Y-m-d' );
+	$tomorrow_local  = ( new DateTimeImmutable( 'tomorrow', $timezone_local ) )->format( 'Y-m-d' );
+	$yesterday_local = ( new DateTimeImmutable( 'yesterday', $timezone_local ) )->format( 'Y-m-d' );
+
+	// If the offset of the date of the time is different from the offset of the site, add a marker.
+	if ( get_date_from_gmt( $datetime_utc, 'P' ) !== get_date_from_gmt( 'now', 'P' ) ) {
+		$time_format .= ' (P)';
+	}
+
+	$time_local = get_date_from_gmt( $datetime_utc, $time_format );
+
+	if ( $date_local === $today_local ) {
+		$date = sprintf(
+			/* translators: %s: Time */
+			__( 'Today at %s', 'wp-crontrol' ),
+			$time_local,
+		);
+	} elseif ( $date_local === $tomorrow_local ) {
+		$date = sprintf(
+			/* translators: %s: Time */
+			__( 'Tomorrow at %s', 'wp-crontrol' ),
+			$time_local,
+		);
+	} elseif ( $date_local === $yesterday_local ) {
+		$date = sprintf(
+			/* translators: %s: Time */
+			__( 'Yesterday at %s', 'wp-crontrol' ),
+			$time_local,
+		);
+	} else {
+		$date = sprintf(
+			/* translators: 1: Date, 2: Time */
+			__( '%1$s at %2$s', 'wp-crontrol' ),
+			get_date_from_gmt( $datetime_utc, 'F jS' ),
+			$time_local,
+		);
+	}
+
+	return sprintf(
+		'<time datetime="%1$s">%2$s</time>',
+		esc_attr( gmdate( 'c', $timestamp ) ),
+		esc_html( $date )
+	);
 }
 
 /**

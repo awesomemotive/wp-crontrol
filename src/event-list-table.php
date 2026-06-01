@@ -8,7 +8,6 @@ namespace Crontrol\Event;
 use Crontrol\Context\UserContext;
 use Crontrol\Context\FeatureContext;
 use Crontrol\Exception\UnknownScheduleException;
-use DateTimeImmutable;
 
 require_once ABSPATH . 'wp-admin/includes/class-wp-list-table.php';
 
@@ -848,55 +847,7 @@ class Table extends \WP_List_Table {
 			);
 		}
 
-		$time_format = 'g:i a';
-
-		$event_datetime_utc = $event->get_next_run_utc( 'Y-m-d H:i:s' );
-
-		$timezone_local  = wp_timezone();
-		$event_local     = get_date_from_gmt( $event_datetime_utc, 'Y-m-d' );
-		$today_local     = ( new DateTimeImmutable( 'now', $timezone_local ) )->format( 'Y-m-d' );
-		$tomorrow_local  = ( new DateTimeImmutable( 'tomorrow', $timezone_local ) )->format( 'Y-m-d' );
-		$yesterday_local = ( new DateTimeImmutable( 'yesterday', $timezone_local ) )->format( 'Y-m-d' );
-
-		// If the offset of the date of the event is different from the offset of the site, add a marker.
-		if ( get_date_from_gmt( $event_datetime_utc, 'P' ) !== get_date_from_gmt( 'now', 'P' ) ) {
-			$time_format .= ' (P)';
-		}
-
-		$event_time_local = get_date_from_gmt( $event_datetime_utc, $time_format );
-
-		if ( $event_local === $today_local ) {
-			$date = sprintf(
-				/* translators: %s: Time */
-				__( 'Today at %s', 'wp-crontrol' ),
-				$event_time_local,
-			);
-		} elseif ( $event_local === $tomorrow_local ) {
-			$date = sprintf(
-				/* translators: %s: Time */
-				__( 'Tomorrow at %s', 'wp-crontrol' ),
-				$event_time_local,
-			);
-		} elseif ( $event_local === $yesterday_local ) {
-			$date = sprintf(
-				/* translators: %s: Time */
-				__( 'Yesterday at %s', 'wp-crontrol' ),
-				$event_time_local,
-			);
-		} else {
-			$date = sprintf(
-				/* translators: 1: Date, 2: Time */
-				__( '%1$s at %2$s', 'wp-crontrol' ),
-				get_date_from_gmt( $event_datetime_utc, 'F jS' ),
-				$event_time_local,
-			);
-		}
-
-		$time = sprintf(
-			'<time datetime="%1$s">%2$s</time>',
-			esc_attr( $event->get_next_run_utc() ),
-			esc_html( $date )
-		);
+		$time = \Crontrol\time_element( $event->timestamp );
 
 		$until = $event->timestamp - time();
 		$late  = $event->is_late();
