@@ -94,7 +94,7 @@ table.wp-list-table {
 }
 
 .column-crontrol_time,
-.column-crontrol_ran,
+.column-crontrol_pro_last_run,
 .column-crontrol_next {
 	white-space: nowrap;
 }
