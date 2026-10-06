@@ -5,7 +5,6 @@ Tags: cron, wp-cron, crontrol, debug, woocommerce
 Tested up to: 7.1
 Stable tag: 1.21.2
 License: GPL v2 or later
-Donate link: https://github.com/sponsors/johnbillion
 
 Take control of the cron events on your WordPress website or WooCommerce store with WP Crontrol.
 
@@ -58,15 +57,6 @@ I maintain several other plugins for developers. Check them out:
 
 * [Query Monitor](https://wordpress.org/plugins/query-monitor/) is the developer tools panel for WordPress.
 * [User Switching](https://wordpress.org/plugins/user-switching/) provides instant switching between user accounts in WordPress.
-
-### Thanks
-
-The time that I spend maintaining this plugin and others is in part sponsored by:
-
-* [Automattic](https://automattic.com/)
-* [ServMask](https://servmask.com/)
-* [WP Staging](https://wp-staging.com/)
-* [All my kind sponsors on GitHub](https://github.com/sponsors/johnbillion)
 
 ### Privacy Statement
 

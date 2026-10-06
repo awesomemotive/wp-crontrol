@@ -95,11 +95,5 @@
 		"forum": "https://wordpress.org/support/plugin/wp-crontrol",
 		"source": "https://github.com/johnbillion/wp-crontrol",
 		"security": "https://wp-crontrol.com/security/"
-	},
-	"funding": [
-		{
-			"type": "github",
-			"url": "https://github.com/sponsors/johnbillion"
-		}
-	]
+	}
 }

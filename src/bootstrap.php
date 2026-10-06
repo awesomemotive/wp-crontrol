@@ -62,7 +62,6 @@ function init_hooks() {
 	add_filter( "network_admin_plugin_action_links_{$plugin_file}", __NAMESPACE__ . '\network_plugin_action_links' );
 	add_filter( 'removable_query_args',               __NAMESPACE__ . '\filter_removable_query_args' );
 	add_filter( 'pre_unschedule_event',               __NAMESPACE__ . '\maybe_clear_doing_cron' );
-	add_filter( 'plugin_row_meta',                    __NAMESPACE__ . '\filter_plugin_row_meta', 10, 2 );
 
 	add_action( 'load-tools_page_wp-crontrol', __NAMESPACE__ . '\setup_manage_page' );
 
@@ -101,27 +100,6 @@ function get_message() {
 		get_current_user_id()
 	);
 	return get_transient( $key );
-}
-
-/**
- * Filters the array of row meta for each plugin in the Plugins list table.
- *
- * @param array<int,string> $plugin_meta An array of the plugin row's meta data.
- * @param string            $plugin_file Path to the plugin file relative to the plugins directory.
- * @return array<int,string> An array of the plugin row's meta data.
- */
-function filter_plugin_row_meta( array $plugin_meta, $plugin_file ) {
-	if ( 'wp-crontrol/wp-crontrol.php' !== $plugin_file ) {
-		return $plugin_meta;
-	}
-
-	$plugin_meta[] = sprintf(
-		'<a href="%1$s"><span class="dashicons dashicons-star-filled" aria-hidden="true" style="font-size:14px;line-height:1.3"></span>%2$s</a>',
-		'https://github.com/sponsors/johnbillion',
-		esc_html_x( 'Sponsor', 'verb', 'wp-crontrol' )
-	);
-
-	return $plugin_meta;
 }
 
 /**

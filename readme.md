@@ -42,24 +42,6 @@ WP Crontrol is private by default and always will be. It does not send data to a
 
 WP Crontrol aims to be fully accessible to all of its users. [WP Crontrol's full accessibility statement can be found here](https://wp-crontrol.com/accessibility/).
 
-## Sponsors
-
-<p align="center">The time that I spend maintaining this plugin and others is in part sponsored by:</p>
-
-<p align="center"><a href="https://automattic.com"><img src="https://cdn.jsdelivr.net/gh/johnbillion/johnbillion@latest/assets/sponsors/automattic.svg" alt="Automattic" width="50%"></a></p>
-
-<p align="center">
-    <a href="https://servmask.com"><img src="https://cdn.jsdelivr.net/gh/johnbillion/johnbillion@latest/assets/sponsors/servmask.svg" alt="ServMask" width="25%"></a>
-    &nbsp; &nbsp; &nbsp;
-    <a href="https://wp-staging.com"><img src="https://cdn.jsdelivr.net/gh/johnbillion/johnbillion@latest/assets/sponsors/wp-staging.png" alt="WP Staging" width="25%"></a>
-</p>
-
-<p align="center">Plus all my kind sponsors on GitHub:</p>
-
-<p align="center"><a href="https://github.com/sponsors/johnbillion"><img src="https://cdn.jsdelivr.net/gh/johnbillion/johnbillion@latest/sponsors.svg" alt="Sponsors"></p>
-
-<p align="center"><a href="https://github.com/sponsors/johnbillion">Click here to find out about supporting my open source tools and plugins</a>.</p>
-
 ## Screenshots
 
 1. Cron events can be modified, deleted, and executed<br>![](.wordpress-org/screenshot-1.png)
