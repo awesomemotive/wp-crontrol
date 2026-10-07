@@ -503,6 +503,49 @@ function check_integrity( $value, $stored_hash ): bool {
 }
 
 /**
+ * Returns the integrity hash for a URL cron event's URL.
+ *
+ * URL hashes carry a prefix so that a hash created for a URL can never pass the integrity
+ * check for a PHP cron event's code, which uses an unprefixed hash.
+ *
+ * @param string $url The URL.
+ * @return string The hash.
+ */
+function url_hash( $url ): string {
+	return wp_hash( 'crontrol-url|' . $url );
+}
+
+/**
+ * Checks the integrity of a URL cron event's URL compared to its stored hash.
+ *
+ * URL cron events saved before 1.22.0 have an unprefixed hash. They're still accepted so that existing
+ * URL cron events keep running, and they get the prefixed hash when they're next saved.
+ *
+ * @param string|null $url         The URL.
+ * @param string|null $stored_hash The stored hash of the URL.
+ * @return bool
+ */
+function check_url_integrity( $url, $stored_hash ): bool {
+	if ( empty( $url ) || empty( $stored_hash ) ) {
+		return false;
+	}
+
+	return hash_equals( $stored_hash, url_hash( $url ) ) || check_integrity( $url, $stored_hash );
+}
+
+/**
+ * Returns the HTTP method for a URL cron event, limited to the methods the form offers.
+ *
+ * @param mixed $method The requested method.
+ * @return string One of GET, POST, HEAD, or DELETE.
+ */
+function url_method( $method ): string {
+	$method = is_string( $method ) ? strtoupper( $method ) : '';
+
+	return in_array( $method, array( 'GET', 'POST', 'HEAD', 'DELETE' ), true ) ? $method : 'GET';
+}
+
+/**
  * Initialises and returns the list table for events.
  *
  * @return Table The list table.

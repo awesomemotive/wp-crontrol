@@ -20,7 +20,7 @@ final class URLCronEvent extends CrontrolEvent {
 	#[\Override]
 	public function integrity_failed(): bool {
 		$args = $this->args[0] ?? array();
-		return ! check_integrity( $args['url'] ?? null, $args['hash'] ?? null );
+		return ! check_url_integrity( $args['url'] ?? null, $args['hash'] ?? null );
 	}
 
 	#[\Override]

@@ -231,6 +231,7 @@ The photo was taken by <a href="https://www.flickr.com/photos/michaelpardo/21453
 
 * WP Crontrol is now maintained by the team at Awesome Motive. Thank you to John Blackbourn for building and looking after WP Crontrol for so many years. It remains free, open source, and private by default.
 * Fixes Run Now reporting a failure when the event was scheduled successfully, for example when a plugin such as Cavalcade stores events outside the cron option. Props @abdulraheemalick.
+* Security: Hardens several permission and integrity checks for cron events.
 * Removes the sponsor link.
 
 ### 1.21.2 (29 August 2026) ###
