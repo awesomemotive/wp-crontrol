@@ -32,6 +32,14 @@ final class LogRun {
 	public int $depth = 0;
 
 	/**
+	 * The call sites that led to this invocation, outermost first. While they're still on the
+	 * call stack, the run is in progress.
+	 *
+	 * @var list<string>
+	 */
+	public array $frames = array();
+
+	/**
 	 * Collects the messages logged during the run.
 	 */
 	public Logger $logger;

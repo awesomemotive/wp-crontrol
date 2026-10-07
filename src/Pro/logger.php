@@ -17,7 +17,6 @@ use WP_Error;
  *
  * @phpstan-type LogEntry array{
  *   message: string,
- *   context: array<string, mixed>,
  *   level: string,
  * }
  * @phpstan-type LogMessage WP_Error|Throwable|string|bool|null
@@ -34,11 +33,31 @@ class Logger {
 	public const DEBUG = 'debug';
 
 	/**
+	 * Maximum number of messages kept per run. Later messages are counted but not kept.
+	 */
+	protected static int $max_entries = 200;
+
+	/**
+	 * Maximum length of a kept message, in bytes.
+	 */
+	protected static int $max_message_length = 1000;
+
+	/**
 	 * Array to store log messages.
 	 *
 	 * @var list<LogEntry>
 	 */
 	protected $logs = array();
+
+	/**
+	 * Number of messages that were not kept because the limit was reached.
+	 */
+	protected int $omitted = 0;
+
+	/**
+	 * Whether any message at warning level or above was logged, kept or not.
+	 */
+	protected bool $saw_warning = false;
 
 	public function init(): void {
 		foreach ( self::get_levels() as $level ) {
@@ -213,6 +232,15 @@ class Logger {
 	 * @phpstan-param LogMessage $message
 	 */
 	protected function store( $level, $message, array $context = array(), ?string $prefix = null ): void {
+		if ( in_array( $level, self::get_warning_levels(), true ) ) {
+			$this->saw_warning = true;
+		}
+
+		if ( count( $this->logs ) >= self::$max_entries ) {
+			$this->omitted++;
+			return;
+		}
+
 		if ( $message instanceof WP_Error ) {
 			$message = sprintf(
 				'WP_Error: %s (%s)',
@@ -243,11 +271,31 @@ class Logger {
 			$message = '(Empty string)';
 		}
 
+		$message = self::interpolate( $message, $context, $prefix );
+
+		if ( strlen( $message ) > self::$max_message_length ) {
+			$message = substr( $message, 0, self::$max_message_length ) . ' [truncated]';
+		}
+
+		// Contexts are not kept: they can hold large values, and the message already includes them.
 		$this->logs[] = array(
-			'message' => self::interpolate( $message, $context, $prefix ),
-			'context' => $context,
+			'message' => $message,
 			'level'   => $level,
 		);
+	}
+
+	/**
+	 * Number of messages that were not kept because the limit was reached.
+	 */
+	public function get_omitted(): int {
+		return $this->omitted;
+	}
+
+	/**
+	 * Whether any message at warning level or above was logged, kept or not.
+	 */
+	public function saw_warning(): bool {
+		return $this->saw_warning;
 	}
 
 	/**

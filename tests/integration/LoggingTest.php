@@ -274,6 +274,87 @@ final class LoggingTest extends Test {
 		self::assertFalse( has_filter( 'wp_mail', array( Log::get_instance(), 'filter_wp_mail' ) ) );
 	}
 
+	public function testParentActivityAfterCatchingIsAttributedToTheParent(): void {
+		add_filter( 'crontrol/should_log', '__return_true' );
+		$this->observe( 'crontrol_test_parent' );
+		$this->observe( 'crontrol_test_child' );
+
+		add_action( 'crontrol_test_parent', static function (): void {
+			try {
+				do_action( 'crontrol_test_child' );
+			} catch ( \RuntimeException $e ) {
+				do_action( 'crontrol/error', 'Parent saw the child fail' );
+				apply_filters( 'wp_mail', array() );
+			}
+		} );
+		add_action( 'crontrol_test_child', array( self::class, 'throw_inner_failure' ) );
+
+		do_action( 'crontrol_test_parent' );
+
+		global $wp_current_filter;
+		$wp_current_filter = array_values( array_diff( $wp_current_filter, array( 'crontrol_test_child' ) ) );
+
+		$parent = $this->runs( 'crontrol_test_parent' );
+		$child = $this->runs( 'crontrol_test_child' );
+
+		self::assertCount( 1, $parent );
+		self::assertCount( 1, $child );
+		self::assertSame( EventRun::STATUS_ERRORED, $parent[0]->status );
+		self::assertSame( 1, $parent[0]->emails );
+		self::assertSame( 'Parent saw the child fail', $parent[0]->errors[0]['message'] );
+		self::assertSame( 0, $child[0]->emails );
+		self::assertSame( EventRun::STATUS_ERRORED, $child[0]->status );
+	}
+
+	public function testMessagesAreBoundedWhileCollecting(): void {
+		add_filter( 'crontrol/should_log', '__return_true' );
+		$this->observe( 'crontrol_test_chatty' );
+
+		add_action( 'crontrol_test_chatty', static function (): void {
+			for ( $i = 0; $i < 500; $i++ ) {
+				do_action( 'crontrol/info', 'Message {i}', array(
+					'i'     => $i,
+					'large' => str_repeat( 'x', 10000 ),
+				) );
+			}
+			do_action( 'crontrol/warning', 'A late warning' );
+		} );
+
+		do_action( 'crontrol_test_chatty' );
+
+		$runs = $this->runs( 'crontrol_test_chatty' );
+
+		self::assertCount( 1, $runs );
+		// The warning was past the limit, but the run still counts as failed.
+		self::assertSame( EventRun::STATUS_ERRORED, $runs[0]->status );
+		$last = end( $runs[0]->logs );
+		self::assertIsArray( $last );
+		self::assertStringContainsString( 'more messages were not kept', $last['message'] );
+		self::assertStringNotContainsString( 'xxxxxxxxxx', (string) wp_json_encode( $runs[0]->logs ) );
+	}
+
+	public function testFailedMetricWritesAreRetried(): void {
+		global $wpdb;
+
+		delete_site_option( 'crontrol_metrics_last_hour' );
+		update_site_option( 'crontrol_metrics_last_hour', '2031-01-02 08:00:00' );
+
+		$fail = static function ( string $query ): string {
+			return ( 0 === strpos( ltrim( $query ), 'INSERT INTO' ) && false !== strpos( $query, 'crontrol_event_metrics' ) ) ? 'SELECT broken FROM' : $query;
+		};
+
+		$suppress = $wpdb->suppress_errors( true );
+		add_filter( 'query', $fail );
+		\Crontrol\Pro\aggregate_missing_metrics( new \DateTimeImmutable( '2031-01-02 12:30:00', new \DateTimeZone( 'UTC' ) ) );
+		remove_filter( 'query', $fail );
+		$wpdb->suppress_errors( $suppress );
+
+		self::assertSame( '2031-01-02 08:00:00', get_site_option( 'crontrol_metrics_last_hour' ) );
+
+		delete_site_option( 'crontrol_metrics_last_hour' );
+		delete_site_option( 'crontrol_metrics_last_day' );
+	}
+
 	public function testLogDetailsAreBounded(): void {
 		$entries = array();
 

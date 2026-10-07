@@ -49,9 +49,9 @@ final class EventMetricModel extends Model {
 	 * Aggregates hourly error counts for a specific hour.
 	 *
 	 * @param DateTimeImmutable $hour The hour to aggregate (e.g., '2025-01-15 14:00:00').
-	 * @return int Number of metric records created.
+	 * @return int|null Number of metric records created, or null if the query failed.
 	 */
-	public static function aggregate_errors_hourly( DateTimeImmutable $hour ): int {
+	public static function aggregate_errors_hourly( DateTimeImmutable $hour ): ?int {
 		$wpdb = self::wpdb();
 		$event_table = EventRunModel::get_table();
 		$metric_table = self::get_table();
@@ -99,16 +99,16 @@ final class EventMetricModel extends Model {
 			)
 		);
 
-		return $result === false ? 0 : (int) $result;
+		return $result === false ? null : (int) $result;
 	}
 
 	/**
 	 * Aggregates hourly warning counts for a specific hour.
 	 *
 	 * @param DateTimeImmutable $hour The hour to aggregate (e.g., '2025-01-15 14:00:00').
-	 * @return int Number of metric records created.
+	 * @return int|null Number of metric records created, or null if the query failed.
 	 */
-	public static function aggregate_warnings_hourly( DateTimeImmutable $hour ): int {
+	public static function aggregate_warnings_hourly( DateTimeImmutable $hour ): ?int {
 		$wpdb = self::wpdb();
 		$event_table = EventRunModel::get_table();
 		$metric_table = self::get_table();
@@ -156,16 +156,16 @@ final class EventMetricModel extends Model {
 			)
 		);
 
-		return $result === false ? 0 : (int) $result;
+		return $result === false ? null : (int) $result;
 	}
 
 	/**
 	 * Aggregates daily average hook durations for a specific day.
 	 *
 	 * @param DateTimeImmutable $day The day to aggregate (e.g., 'yesterday').
-	 * @return int Number of metric records created.
+	 * @return int|null Number of metric records created, or null if the query failed.
 	 */
-	public static function aggregate_hook_duration_daily( DateTimeImmutable $day ): int {
+	public static function aggregate_hook_duration_daily( DateTimeImmutable $day ): ?int {
 		$wpdb = self::wpdb();
 		$event_table = EventRunModel::get_table();
 		$metric_table = self::get_table();
@@ -213,16 +213,16 @@ final class EventMetricModel extends Model {
 			)
 		);
 
-		return $result === false ? 0 : (int) $result;
+		return $result === false ? null : (int) $result;
 	}
 
 	/**
 	 * Aggregates hourly average hook durations for a specific hour.
 	 *
 	 * @param DateTimeImmutable $hour The hour to aggregate (e.g., '2025-01-15 14:00:00').
-	 * @return int Number of metric records created.
+	 * @return int|null Number of metric records created, or null if the query failed.
 	 */
-	public static function aggregate_hook_duration_hourly( DateTimeImmutable $hour ): int {
+	public static function aggregate_hook_duration_hourly( DateTimeImmutable $hour ): ?int {
 		$wpdb = self::wpdb();
 		$event_table = EventRunModel::get_table();
 		$metric_table = self::get_table();
@@ -270,7 +270,7 @@ final class EventMetricModel extends Model {
 			)
 		);
 
-		return $result === false ? 0 : (int) $result;
+		return $result === false ? null : (int) $result;
 	}
 
 	/**
@@ -278,7 +278,7 @@ final class EventMetricModel extends Model {
 	 *
 	 * @param DateTimeImmutable $hour The completed hour for hourly metrics.
 	 * @param DateTimeImmutable $day The completed day for daily metrics.
-	 * @return array<string,int> Number of metric records created per type.
+	 * @return array<string,int|null> Number of metric records created per type, null where the query failed.
 	 */
 	public static function aggregate_all_metrics( DateTimeImmutable $hour, DateTimeImmutable $day ): array {
 		return [

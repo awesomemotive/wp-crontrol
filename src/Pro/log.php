@@ -47,6 +47,13 @@ class Log {
 	private array $observers = array();
 
 	/**
+	 * The callbacks that route logged messages to the run in progress, keyed by hook name.
+	 *
+	 * @var array<string, \Closure>
+	 */
+	private array $routes = array();
+
+	/**
 	 * Sets up actions and filters for the cron event logging.
 	 */
 	public function init(): void {
@@ -78,7 +85,8 @@ class Log {
 		// Both callbacks are called from the same place for one invocation of the hook, so the
 		// depth of the PHP call stack identifies the invocation, even when the hook recurses.
 		$start = function ( ...$hook_args ) use ( $hook ): void {
-			$this->log_start( $hook, $hook_args, count( debug_backtrace( DEBUG_BACKTRACE_IGNORE_ARGS ) ) );
+			$trace = debug_backtrace( DEBUG_BACKTRACE_IGNORE_ARGS );
+			$this->log_start( $hook, $hook_args, count( $trace ), self::trace_signature( array_slice( $trace, 1 ) ) );
 		};
 		$end = function () use ( $hook ): void {
 			$this->log_end( $hook, count( debug_backtrace( DEBUG_BACKTRACE_IGNORE_ARGS ) ) );
@@ -204,6 +212,87 @@ class Log {
 	}
 
 	/**
+	 * Turns a backtrace into a list of call sites, outermost first.
+	 *
+	 * @param array<int, array<string, mixed>> $trace A backtrace from debug_backtrace().
+	 * @return list<string>
+	 */
+	private static function trace_signature( array $trace ): array {
+		$signature = array();
+
+		foreach ( array_reverse( $trace ) as $frame ) {
+			$signature[] = ( $frame['file'] ?? '' ) . ':' . ( $frame['line'] ?? '' ) . ':' . ( $frame['class'] ?? '' ) . ( $frame['function'] ?? '' );
+		}
+
+		return $signature;
+	}
+
+	/**
+	 * The innermost run still in progress, after finishing any run whose hook is no longer on
+	 * the call stack because an exception left it and was caught. Used before attributing
+	 * messages, HTTP requests and emails, so that they go to the right run.
+	 */
+	private function active(): ?LogRun {
+		if ( ! $this->stack ) {
+			return null;
+		}
+
+		$now = self::trace_signature( debug_backtrace( DEBUG_BACKTRACE_IGNORE_ARGS ) );
+
+		while ( $this->stack ) {
+			$top = end( $this->stack );
+
+			if ( $top->ended ) {
+				array_pop( $this->stack );
+				continue;
+			}
+
+			if ( array_slice( $now, 0, count( $top->frames ) ) === $top->frames ) {
+				return $top;
+			}
+
+			$this->abandon( array_pop( $this->stack ) );
+		}
+
+		$this->stop_listening();
+
+		return null;
+	}
+
+	/**
+	 * Records a run that ended because an exception was thrown in it and caught by the code
+	 * that fired its hook.
+	 *
+	 * @param LogRun $run The run.
+	 */
+	private function abandon( LogRun $run ): void {
+		if ( $run->ended ) {
+			return;
+		}
+
+		$run->run->errors[] = array(
+			'level'   => Logger::ERROR,
+			'message' => __( 'The run ended early because an exception was thrown and caught by the code that fired this hook.', 'wp-crontrol' ),
+		);
+
+		$this->finish( $run, true );
+	}
+
+	/**
+	 * Passes a logged message to the run in progress.
+	 *
+	 * @param string  $method The Logger method.
+	 * @param mixed[] $args   The arguments for it.
+	 */
+	private function route( string $method, array $args ): void {
+		$current = $this->active();
+
+		if ( $current ) {
+			$current->logger->{$method}( ...$args );
+		}
+	}
+
+	/**
 	 * The innermost run being logged, if any.
 	 */
 	private function current(): ?LogRun {
@@ -226,7 +315,7 @@ class Log {
 	 * @return mixed[] HTTP request arguments.
 	 */
 	public function filter_http_request_args( array $args, $url ): array {
-		$current = $this->current();
+		$current = $this->active();
 
 		if ( ! $current ) {
 			return $args;
@@ -274,7 +363,7 @@ class Log {
 			return;
 		}
 
-		$current = $this->current();
+		$current = $this->active();
 		$key     = $args['_crontrol_key'] ?? null;
 
 		if ( ! $current || ! is_string( $key ) || ! isset( $current->https[ $key ] ) ) {
@@ -341,7 +430,7 @@ class Log {
 	 * @return array<string, mixed> The same email arguments.
 	 */
 	public function filter_wp_mail( $args ) {
-		$current = $this->current();
+		$current = $this->active();
 
 		if ( $current ) {
 			$current->emails++;
@@ -362,7 +451,7 @@ class Log {
 	 * @param string $context   Optional execution context.
 	 */
 	public function action_scheduler_after_execute( $action_id, $action = null, $context = '' ): void {
-		if ( ! $this->current() ) {
+		if ( ! $this->active() ) {
 			return;
 		}
 
@@ -401,7 +490,7 @@ class Log {
 	 * @param string    $context   Optional execution context.
 	 */
 	public function action_scheduler_failed_execution( $action_id, $error = null, $context = '' ): void {
-		if ( ! $this->current() ) {
+		if ( ! $this->active() ) {
 			return;
 		}
 
@@ -505,6 +594,29 @@ class Log {
 		add_filter( 'wp_mail', array( $this, 'filter_wp_mail' ), 9999 );
 		add_action( 'action_scheduler_after_execute', array( $this, 'action_scheduler_after_execute' ), 9999, 3 );
 		add_action( 'action_scheduler_failed_execution', array( $this, 'action_scheduler_failed_execution' ), 9999, 3 );
+
+		foreach ( Logger::get_levels() as $level ) {
+			foreach ( array( 'crontrol', 'qm' ) as $prefix ) {
+				$this->routes[ "{$prefix}/{$level}" ] = function ( $message, $context = array() ) use ( $level ): void {
+					$this->route( $level, array( $message, is_array( $context ) ? $context : array() ) );
+				};
+			}
+		}
+
+		foreach ( array( 'crontrol', 'qm' ) as $prefix ) {
+			$this->routes[ "{$prefix}/assert" ] = function ( $assertion, $message = '', $value = null ): void {
+				$this->route( 'assert', array( $assertion, (string) $message, $value ) );
+			};
+			$this->routes[ "{$prefix}/log" ] = function ( $level, $message, $context = array() ): void {
+				if ( in_array( $level, Logger::get_levels(), true ) ) {
+					$this->route( (string) $level, array( $message, is_array( $context ) ? $context : array() ) );
+				}
+			};
+		}
+
+		foreach ( $this->routes as $hook => $callback ) {
+			add_action( $hook, $callback, 10, 3 );
+		}
 	}
 
 	/**
@@ -523,6 +635,12 @@ class Log {
 		remove_action( 'action_scheduler_after_execute', array( $this, 'action_scheduler_after_execute' ), 9999 );
 		remove_action( 'action_scheduler_failed_execution', array( $this, 'action_scheduler_failed_execution' ), 9999 );
 
+		foreach ( $this->routes as $hook => $callback ) {
+			remove_action( $hook, $callback, 10 );
+		}
+
+		$this->routes = array();
+
 		set_exception_handler( $this->old_exception_handler );
 		$this->old_exception_handler = null;
 	}
@@ -530,11 +648,12 @@ class Log {
 	/**
 	 * Starts the logging for the current cron event.
 	 *
-	 * @param string  $hook      The hook name.
-	 * @param mixed[] $hook_args The arguments passed to the hook.
-	 * @param int     $depth     The depth of the call stack for this invocation.
+	 * @param string       $hook      The hook name.
+	 * @param mixed[]      $hook_args The arguments passed to the hook.
+	 * @param int          $depth     The depth of the call stack for this invocation.
+	 * @param list<string> $frames    The call sites that led to this invocation, outermost first.
 	 */
-	public function log_start( string $hook, array $hook_args = array(), int $depth = 0 ): void {
+	public function log_start( string $hook, array $hook_args = array(), int $depth = 0, array $frames = array() ): void {
 		global $wpdb;
 
 		if ( ! self::is_cron_context() ) {
@@ -577,18 +696,12 @@ class Log {
 
 		$this->start_listening();
 
-		$previous = $this->current();
-
-		if ( $previous ) {
-			$previous->logger->deinit();
-		}
-
 		$state = new LogRun();
 		$state->run = $run;
 		$state->hook = $hook;
 		$state->depth = $depth;
+		$state->frames = $frames;
 		$state->logger = new Logger();
-		$state->logger->init();
 		$state->start_queries = (int) $wpdb->num_queries;
 
 		$this->stack[] = $state;
@@ -632,11 +745,7 @@ class Log {
 			}
 		}
 
-		$outer = $this->current();
-
-		if ( $outer ) {
-			$outer->logger->init();
-		} else {
+		if ( ! $this->current() ) {
 			$this->stop_listening();
 		}
 	}
@@ -649,21 +758,7 @@ class Log {
 	 */
 	private function finish_abandoned( int $depth ): void {
 		while ( $this->stack && end( $this->stack )->depth > $depth ) {
-			$abandoned = array_pop( $this->stack );
-
-			if ( ! $abandoned->ended ) {
-				$abandoned->run->errors[] = array(
-					'level'   => Logger::ERROR,
-					'message' => __( 'The run ended early because an exception was thrown and caught by the code that fired this hook.', 'wp-crontrol' ),
-				);
-				$this->finish( $abandoned, true );
-			}
-
-			$outer = $this->current();
-
-			if ( $outer ) {
-				$outer->logger->init();
-			}
+			$this->abandon( array_pop( $this->stack ) );
 		}
 	}
 
@@ -677,7 +772,6 @@ class Log {
 		global $wpdb;
 
 		$state->ended = true;
-		$state->logger->deinit();
 
 		$run = $state->run;
 
@@ -696,8 +790,8 @@ class Log {
 			}
 		}
 
-		$has_warning = $errored;
-		$has_error = $errored;
+		$has_warning = $errored || $state->logger->saw_warning();
+		$has_error = $has_warning;
 
 		foreach ( $state->logger->get_logs() as $log ) {
 			$entry = array(
@@ -713,6 +807,17 @@ class Log {
 			}
 
 			$run->logs[] = $entry;
+		}
+
+		if ( $state->logger->get_omitted() ) {
+			$run->logs[] = array(
+				'level'   => Logger::NOTICE,
+				'message' => sprintf(
+					/* translators: %s: Number of log messages */
+					__( '%s more messages were not kept.', 'wp-crontrol' ),
+					number_format_i18n( $state->logger->get_omitted() )
+				),
+			);
 		}
 
 		if ( $has_http_warning ) {

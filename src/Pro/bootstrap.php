@@ -187,9 +187,18 @@ function aggregate_missing_metrics( \DateTimeImmutable $now ): void {
 	}
 
 	while ( $hour < $current_hour ) {
-		EventMetricModel::aggregate_errors_hourly( $hour );
-		EventMetricModel::aggregate_warnings_hourly( $hour );
-		EventMetricModel::aggregate_hook_duration_hourly( $hour );
+		$results = array(
+			EventMetricModel::aggregate_errors_hourly( $hour ),
+			EventMetricModel::aggregate_warnings_hourly( $hour ),
+			EventMetricModel::aggregate_hook_duration_hourly( $hour ),
+		);
+
+		// Stop at a failed write so the hour is retried next time. Hours that were written are
+		// skipped on the retry, because each aggregation checks for existing rows first.
+		if ( in_array( null, $results, true ) ) {
+			return;
+		}
+
 		update_site_option( 'crontrol_metrics_last_hour', $hour->format( 'Y-m-d H:i:s' ) );
 		$hour = $hour->modify( '+1 hour' );
 	}
@@ -205,7 +214,10 @@ function aggregate_missing_metrics( \DateTimeImmutable $now ): void {
 	}
 
 	while ( $day < $today ) {
-		EventMetricModel::aggregate_hook_duration_daily( $day );
+		if ( null === EventMetricModel::aggregate_hook_duration_daily( $day ) ) {
+			return;
+		}
+
 		update_site_option( 'crontrol_metrics_last_day', $day->format( 'Y-m-d H:i:s' ) );
 		$day = $day->modify( '+1 day' );
 	}
