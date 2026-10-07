@@ -74,6 +74,7 @@ function run( $hookname, $sig ) {
  *
  * @param string  $hook Action hook to execute when the event is run.
  * @param mixed[] $args Optional. Array containing each separate argument to pass to the hook's callback function.
+ * @phpstan-param list<mixed> $args
  * @return true|WP_Error True if event successfully scheduled. WP_Error on failure.
  */
 function force_schedule_single_event( $hook, $args = array() ) {
@@ -94,8 +95,11 @@ function force_schedule_single_event( $hook, $args = array() ) {
 
 	$result = _set_cron_array( $crons );
 
+	// `_set_cron_array()` returns false when the `cron` option does not change. That also happens when the
+	// event is already scheduled, or when a plugin such as Cavalcade saves it outside the option, so only
+	// report a failure if the event does not exist.
 	// Not using the WP_Error from `_set_cron_array()` here so we can provide a more specific error message.
-	if ( false === $result ) {
+	if ( false === $result && ! wp_get_scheduled_event( $event->hook, $event->args, $event->timestamp ) ) {
 		return new WP_Error(
 			'could_not_add',
 			sprintf(
