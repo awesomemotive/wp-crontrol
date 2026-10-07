@@ -450,7 +450,7 @@ PHP;
 		$hook = \Crontrol\Event\URLCronEvent::HOOK_NAME;
 
 		self::assertNull( \Crontrol\Event\get_hook_args_display( $hook, array( 'array(4) { url => https://example.com }' ) ) );
-		self::assertIsString( \Crontrol\Event\get_hook_name_label( $hook, array( 'a summary string' ) ) );
+		self::assertNotSame( '', \Crontrol\Event\get_hook_name_label( $hook, array( 'a summary string' ) ) );
 		self::assertSame( '<pre>GET https://example.com/[redacted]</pre>', \Crontrol\Event\get_hook_args_display( $hook, array( array( 'url' => 'https://example.com/[redacted]', 'name' => '' ) ) ) );
 	}
 
