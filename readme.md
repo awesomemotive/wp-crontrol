@@ -1,7 +1,7 @@
 # WP Crontrol
 
 [![](https://img.shields.io/wordpress/plugin/installs/wp-crontrol?style=flat-square)](https://wordpress.org/plugins/wp-crontrol/)
-[![](https://img.shields.io/github/actions/workflow/status/johnbillion/wp-crontrol/acceptance-tests.yml?branch=develop&style=flat-square)](https://github.com/johnbillion/wp-crontrol/actions)
+[![](https://img.shields.io/github/actions/workflow/status/awesomemotive/wp-crontrol/acceptance-tests.yml?branch=develop&style=flat-square)](https://github.com/awesomemotive/wp-crontrol/actions)
 
 Take control of the scheduled cron events on your WordPress website or WooCommerce store with WP Crontrol. From the admin screens you can:
 
@@ -29,7 +29,7 @@ WP Crontrol is aware of timezones, will alert you to events that have no actions
 
 ## Other Plugins
 
-I maintain several other plugins for developers. Check them out:
+WP Crontrol was built by John Blackbourn, who also maintains these plugins for developers:
 
 * [Query Monitor](https://wordpress.org/plugins/query-monitor/) is the developer tools panel for WordPress.
 * [User Switching](https://wordpress.org/plugins/user-switching/) provides instant switching between user accounts in WordPress.

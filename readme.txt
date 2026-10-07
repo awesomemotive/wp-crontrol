@@ -1,9 +1,9 @@
 # WP Crontrol
 
-Contributors: johnbillion, scompt
+Contributors: johnbillion, scompt, smub, seedprod
 Tags: cron, wp-cron, crontrol, debug, woocommerce
 Tested up to: 7.1
-Stable tag: 1.21.2
+Stable tag: 1.22.0
 License: GPL v2 or later
 
 Take control of the cron events on your WordPress website or WooCommerce store with WP Crontrol.
@@ -53,7 +53,7 @@ Developers use WP Crontrol to streamline and debug their WordPress development p
 
 ### Other Plugins
 
-I maintain several other plugins for developers. Check them out:
+WP Crontrol was built by John Blackbourn, who also maintains these plugins for developers:
 
 * [Query Monitor](https://wordpress.org/plugins/query-monitor/) is the developer tools panel for WordPress.
 * [User Switching](https://wordpress.org/plugins/user-switching/) provides instant switching between user accounts in WordPress.
@@ -202,7 +202,7 @@ The cron commands which were previously included in WP Crontrol are now part of 
 
 ### How can I report a security bug?
 
-You can submit a private security vulnerability report to WP Crontrol via [the Security tab on the GitHub repo](https://github.com/johnbillion/wp-crontrol/security). The GitHub Security Advisory process facilitates private collaboration on security issues. You'll receive credit for a valid report and a CVE if necessary.
+You can submit a private security vulnerability report to WP Crontrol via [the Security tab on the GitHub repo](https://github.com/awesomemotive/wp-crontrol/security). The GitHub Security Advisory process facilitates private collaboration on security issues. You'll receive credit for a valid report and a CVE if necessary.
 
 Do not report security issues on the WordPress.org support forums or via email. Thank you.
 
@@ -215,3 +215,13 @@ The photo was taken by <a href="https://www.flickr.com/photos/michaelpardo/21453
 1. Cron events can be modified, deleted, and executed
 2. New cron events can be added
 3. New cron schedules can be added, giving plugin developers more options when scheduling events
+
+## Changelog
+
+### 1.22.0
+
+* WP Crontrol is now maintained by the team at Awesome Motive. Thank you to John Blackbourn for building and looking after WP Crontrol for so many years. It remains free, open source, and private by default.
+* Fix: Run Now no longer reports a failure when the event was scheduled successfully, for example when a plugin such as Cavalcade stores events outside the cron option. Props @abdulraheemalick.
+* Removed the sponsor link.
+
+For older releases, see [the releases page on GitHub](https://github.com/awesomemotive/wp-crontrol/releases).

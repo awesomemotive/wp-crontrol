@@ -91,9 +91,9 @@
 		]
 	},
 	"support": {
-		"issues": "https://github.com/johnbillion/wp-crontrol/issues",
+		"issues": "https://github.com/awesomemotive/wp-crontrol/issues",
 		"forum": "https://wordpress.org/support/plugin/wp-crontrol",
-		"source": "https://github.com/johnbillion/wp-crontrol",
+		"source": "https://github.com/awesomemotive/wp-crontrol",
 		"security": "https://wp-crontrol.com/security/"
 	}
 }
