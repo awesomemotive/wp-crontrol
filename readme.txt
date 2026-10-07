@@ -216,12 +216,67 @@ The photo was taken by <a href="https://www.flickr.com/photos/michaelpardo/21453
 2. New cron events can be added
 3. New cron schedules can be added, giving plugin developers more options when scheduling events
 
-## Changelog
+## Changelog ##
 
-### 1.22.0
+### 1.22.0 (8 October 2026) ###
 
 * WP Crontrol is now maintained by the team at Awesome Motive. Thank you to John Blackbourn for building and looking after WP Crontrol for so many years. It remains free, open source, and private by default.
-* Fix: Run Now no longer reports a failure when the event was scheduled successfully, for example when a plugin such as Cavalcade stores events outside the cron option. Props @abdulraheemalick.
-* Removed the sponsor link.
+* Fixes Run Now reporting a failure when the event was scheduled successfully, for example when a plugin such as Cavalcade stores events outside the cron option. Props @abdulraheemalick.
+* Removes the sponsor link.
 
-For older releases, see [the releases page on GitHub](https://github.com/awesomemotive/wp-crontrol/releases).
+### 1.21.2 (29 August 2026) ###
+
+- Confirms full support for WordPress 7.1
+- Bumps the minimum supported version of WordPress to 6.6
+
+
+### 1.21.1 (31 July 2026) ###
+
+- Fixes some bulk delete behaviour
+- Confirms full support for WordPress 7.0
+
+### 1.21.0 (28 January 2026) ###
+
+* Adds support for invalid args in cron events by relaxing the strict typing and showing a warning on the listing and editing screens.
+
+### 1.20.0 (17 December 2025) ###
+
+* Confirms support for WordPress 6.9
+* Minor UI and UX improvements
+* Some architectural changes to prepare for future enhancements
+
+
+### 1.19.3 (23 October 2025) ###
+
+* Corrects the handling of closures as cron event actions.
+
+
+### 1.19.2 (19 August 2025) ###
+
+* Security: Hardens the "URL cron event" functionality by rejecting disallowed URLs. [More information see the security advisory](https://github.com/awesomemotive/wp-crontrol/security/advisories/GHSA-35c5-67fm-cpcp).
+* Tweaks the display of some non-persistent WordPress core hooks when Multisite is enabled.
+
+### 1.19.1 (3 June 2025) ###
+
+* Reinstates the ability to edit the Action Scheduler event.
+
+### 1.19.0 (23 April 2025) ###
+
+* Confirms support for WordPress 6.8
+* Further improvements to the display of dates, intervals, and timezones for increased clarity
+* Adds more contextual help links for problematic events
+* Various UI and UX improvements
+
+### 1.18.0 (13 January 2025) ###
+
+* Introduces support for a `CRONTROL_DISALLOW_PHP_EVENTS` constant to fully disable the PHP cron event functionality. [Full documentation here](https://wp-crontrol.com/docs/php-cron-events/).
+* Further improvements to how time durations and timezone information is displayed.
+
+### 1.17.1 (22 November 2024) ###
+
+* Confirms support for WordPress 6.7
+* Avoids some warnings when running on PHP 8.3 and 8.4
+
+### Earlier versions ###
+
+For the changelog of earlier versions, <a href="https://github.com/awesomemotive/wp-crontrol/releases">refer to the releases page on GitHub</a>.
