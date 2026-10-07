@@ -503,6 +503,34 @@ function check_integrity( $value, $stored_hash ): bool {
 }
 
 /**
+ * Returns the descriptive label for a hook name, as shown in the event list.
+ *
+ * @param string  $hook The hook name.
+ * @param mixed[] $args The event arguments.
+ * @return string The HTML for the hook name label.
+ */
+function get_hook_name_label( string $hook, array $args ): string {
+	return Event::create( $hook, 0, '', $args, null, null )->get_hook_name_label();
+}
+
+/**
+ * Returns the HTML for an event's arguments, or null when the event type has nothing to show.
+ *
+ * @param string  $hook The hook name.
+ * @param mixed[] $args The event arguments.
+ * @return string|null The HTML for the arguments.
+ */
+function get_hook_args_display( string $hook, array $args ): ?string {
+	if ( empty( $args ) ) {
+		return null;
+	}
+
+	$display = Event::create( $hook, 0, '', $args, null, null )->get_args_display();
+
+	return ( '' === $display ) ? null : $display;
+}
+
+/**
  * Returns the integrity hash for a URL cron event's URL.
  *
  * URL hashes use their own key, derived from the auth salt, and a different algorithm from the

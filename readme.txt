@@ -3,7 +3,7 @@
 Contributors: johnbillion, scompt, smub, seedprod
 Tags: cron, wp-cron, crontrol, debug, woocommerce
 Tested up to: 7.1
-Stable tag: 1.22.0
+Stable tag: 1.23.0-dev
 License: GPL v2 or later
 
 Take control of the cron events on your WordPress website or WooCommerce store with WP Crontrol.
@@ -13,6 +13,7 @@ Take control of the cron events on your WordPress website or WooCommerce store w
 Take control of the cron events on your WordPress website or WooCommerce store with WP Crontrol. From the admin screens you can:
 
  * View all scheduled cron events along with their arguments, schedule, callback functions, and when they are next due.
+* Log each run of the events you choose, with its duration, errors, HTTP requests, and emails sent.
  * Edit, delete, pause, resume, and immediately run cron events.
  * Add new cron events.
  * Bulk delete cron events.
@@ -139,7 +140,9 @@ Yes, a CSV file of the event list can be exported and downloaded via the "Export
 
 ### Can I see a historical log of all the cron events that ran on my site?
 
-Not yet, but I hope to add this functionality soon.
+Yes. Go to `Tools → Cron Logs` and turn on logging for the events you want to watch, or use the "Enable logging" link next to an event on the Cron Events screen. Logging is off by default. Each run of a logged event records its duration, errors and warnings, HTTP requests, emails sent, and database queries. Entries are kept for 30 days, up to 10,000 entries per site. Event arguments are not stored, and the query strings of logged HTTP requests are removed.
+
+The `Tools → Cron Insights` screen shows when your events are due over the coming week and the errors from the last seven days.
 
 ### Can I see a historical log of edits, additions, and deletions of cron events and schedules?
 
@@ -226,6 +229,14 @@ The photo was taken by <a href="https://www.flickr.com/photos/michaelpardo/21453
 3. New cron schedules can be added, giving plugin developers more options when scheduling events
 
 ## Changelog ##
+
+### 1.23.0-dev (draft, not released) ###
+
+* Cron event logging and Cron Insights, previously part of WP Crontrol Pro, are now included for everyone. Logging is off until you turn it on for an event.
+* Event arguments are not stored in logs, and the query strings of logged HTTP requests are removed.
+* Logs are kept for 30 days, up to 10,000 entries per site.
+* Deleting the plugin removes its log tables and logging settings.
+* WP Crontrol now shows a one-time note about its new home, which you can dismiss.
 
 ### 1.22.0 (8 October 2026) ###
 

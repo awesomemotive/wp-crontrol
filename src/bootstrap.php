@@ -1042,7 +1042,7 @@ function action_admin_menu() {
 		esc_html__( 'Cron Logs', 'wp-crontrol' ),
 		'manage_options',
 		'wp-crontrol-logs',
-		__NAMESPACE__ . '\admin_logs_page'
+		'Crontrol\Pro\admin_logs_page'
 	);
 
 	foreach ( $tabs as $tab ) {
@@ -2160,8 +2160,7 @@ function admin_manage_page() {
 						'a' => array(
 							'href' => true,
 						),
-						'br' => array(
-						),
+						'br' => array(),
 					)
 				),
 				'<strong>' . esc_html( $hook ) . '</strong>'
@@ -2226,66 +2225,6 @@ function admin_manage_page() {
 			break;
 
 	}
-}
-
-/**
- * Displays the Cron Logs page for the plugin.
- *
- * @return void
- */
-function admin_logs_page() {
-	$table = new Logs\Table();
-	$table->prepare_items();
-	$pro_installed = file_exists( WP_PLUGIN_DIR . '/wp-crontrol-pro/wp-crontrol-pro.php' );
-
-	dismiss_pointer( 'wp-crontrol-logs' );
-
-	?>
-	<div class="wrap">
-		<?php do_tabs(); ?>
-
-		<h1 class="wp-heading-inline"><?php esc_html_e( 'Cron Logs', 'wp-crontrol' ); ?></h1>
-
-		<hr class="wp-header-end">
-
-		<?php if ( $pro_installed ) { ?>
-			<div id="crontrol-pro-notice" class="notice notice-info">
-				<p>
-					<?php esc_html_e( 'Activate the WP Crontrol Pro plugin to access the cron event logs.', 'wp-crontrol' ); ?>
-				</p>
-			</div>
-		<?php } else { ?>
-
-			<div class="crontrol-callout-container">
-				<div class="crontrol-callout-background" aria-hidden="true">
-					<div class="table-responsive">
-						<?php $table->display(); ?>
-					</div>
-				</div>
-				<div class="crontrol-callout-foreground">
-					<div>
-						<div class="crontrol-logo" aria-hidden="true">
-							<?php readfile( plugin_dir_path( PLUGIN_FILE ) . '.wordpress-org/icon.svg' ); ?>
-						</div>
-						<h2><a href="https://wp-crontrol.com/pro/">Cron event logging is a brand new feature available in WP Crontrol Pro</a></h2>
-						<h3>You have no idea what the scheduled cron events on your site are doing.<br>WP Crontrol Pro logs them and shows you.</h3>
-						<ul>
-							<li><span class="dashicons dashicons-yes" aria-hidden="true"></span> See when events run and monitor performance metrics</li>
-							<li><span class="dashicons dashicons-yes" aria-hidden="true"></span> Save hours or days of manual investigation</li>
-							<li><span class="dashicons dashicons-yes" aria-hidden="true"></span> Get alerted to warnings and errors</li>
-							<li><span class="dashicons dashicons-yes" aria-hidden="true"></span> Identify and debug events that miss their schedule</li>
-							<li><span class="dashicons dashicons-yes" aria-hidden="true"></span> Identify daily or weekly hotspots</li>
-						</ul>
-						<p>WP Crontrol Pro is a new add-on for WP Crontrol, with many more features planned for the future.</p>
-						<p class="crontrol-pro-go">
-							<a href="https://wp-crontrol.com/pro/" class="button button-primary button-hero">Get WP Crontrol Pro &rarr;</a>
-						</p>
-					</div>
-				</div>
-			</div>
-		<?php } ?>
-	</div>
-	<?php
 }
 
 /**
@@ -2827,7 +2766,7 @@ function enqueue_assets( $hook_suffix ) {
 	$js_deps = [];
 
 	$show_pointers = [
-		'logs' => ( $tab['events'] || ( $hook_suffix === 'plugins.php' ) ) && ! is_pointer_dismissed( 'wp-crontrol-logs' ),
+		'logs' => $tab['events'] && ! is_pointer_dismissed( 'wp-crontrol-logs' ),
 	];
 	$vars = array(
 		'pointers' => [],
@@ -2842,11 +2781,7 @@ function enqueue_assets( $hook_suffix ) {
 		$vars['pointers']['logs'] = [
 			'title' => esc_js( __( 'Cron event logs', 'wp-crontrol' ) ),
 			'lines' => array(
-				esc_js( sprintf(
-					/* translators: 1: Name of the add-on plugin. */
-					__( 'Cron events can now be logged each time they run with WP Crontrol Pro. ', 'wp-crontrol' ),
-					'WP Crontrol Pro'
-				) ),
+				esc_js( __( 'Cron events can now be logged each time they run, for free. Logging is off until you turn it on for an event.', 'wp-crontrol' ) ),
 				sprintf(
 					'<a href="%s">%s</a>',
 					'tools.php?page=wp-crontrol-logs',

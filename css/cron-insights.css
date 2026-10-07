@@ -1,0 +1,116 @@
+/* WP Crontrol Pro - Cron Insights visualization */
+
+.crontrol-insights {
+	margin-top: 1rem;
+	color: #1f2937;
+}
+
+.crontrol-insights .hidden {
+	display: none;
+}
+
+.crontrol-insights .chart-container {
+	background: #fff;
+	padding: 20px;
+	margin-bottom: 30px;
+	box-shadow: 0 1px 3px rgba( 0, 0, 0, 0.1 );
+}
+
+.crontrol-insights .chart-title {
+	font-size: 1.25rem;
+	font-weight: 600;
+	margin-bottom: 25px;
+	color: #374151;
+}
+
+.crontrol-insights .crontrol-insights-legend {
+	display: grid;
+	grid-template-columns: repeat( auto-fill, minmax( 230px, 1fr ) );
+	gap: 6px 20px;
+	margin-bottom: 20px;
+}
+
+.crontrol-insights .crontrol-insights-legend-item {
+	display: flex;
+	align-items: flex-start;
+	gap: 8px;
+	padding: 0;
+	border: 0;
+	background: none;
+	cursor: pointer;
+	font-size: 13px;
+	line-height: 1.3;
+	color: inherit;
+	text-align: left;
+
+	&:hover {
+		background-color: #eee;
+	}
+}
+
+.crontrol-insights .crontrol-insights-legend-item.is-hidden {
+	opacity: 0.4;
+	text-decoration: line-through;
+}
+
+.crontrol-insights .crontrol-insights-legend-swatch {
+	flex: none;
+	width: 12px;
+	height: 12px;
+	/* Nudge down so the swatch sits centered on the first line of the label. */
+	margin-top: 3px;
+}
+
+.crontrol-insights .crontrol-insights-legend-label {
+	/* min-width:0 lets this flex child shrink below its content width so the
+	   ellipsis can kick in instead of overflowing into the next column. */
+	min-width: 0;
+	overflow: hidden;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+}
+
+.crontrol-insights .crontrol-insights-section-title {
+	margin: 10px 0 20px;
+	padding-top: 20px;
+	border-top: 1px solid #dcdcde;
+	font-size: 1.4rem;
+	color: #374151;
+}
+
+.crontrol-insights .crontrol-insights-stats {
+	display: grid;
+	grid-template-columns: repeat( auto-fit, minmax( 200px, 1fr ) );
+	gap: 20px;
+	margin-bottom: 30px;
+}
+
+.crontrol-insights .crontrol-insights-stat {
+	background: #fff;
+	padding: 20px;
+	box-shadow: 0 1px 3px rgba( 0, 0, 0, 0.1 );
+	border-left: 4px solid #c3c4c7;
+	display: grid;
+	grid-template-columns: 1fr auto;
+	align-items: center;
+}
+
+.crontrol-insights .crontrol-insights-stat.is-error {
+	border-left-color: #d23f31;
+}
+
+.crontrol-insights .crontrol-insights-stat.is-warning {
+	border-left-color: #f1ac51;
+}
+
+.crontrol-insights .crontrol-insights-stat-value {
+	font-size: 1.25rem;
+	line-height: 1.1;
+	color: #1f2937;
+}
+
+.crontrol-insights .crontrol-insights-empty {
+	margin: 0;
+	color: #6b7280;
+	font-style: italic;
+}
