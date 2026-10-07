@@ -374,6 +374,28 @@ final class LoggingTest extends Test {
 		self::assertStringContainsString( 'Assertion failed: Large assertion', $runs[0]->errors[0]['message'] );
 	}
 
+	public function testLoggingLargeValuesFitsInALowMemoryLimit(): void {
+		$logger = dirname( __DIR__, 2 ) . '/src/Pro/logger.php';
+		$code = <<<'PHP'
+function __( $text ) { return $text; }
+function add_action() {}
+class WP_Error {}
+require $argv[1];
+$logger = new Crontrol\Pro\Logger();
+$logger->info( 'Result: {0}', array_fill( 0, 50000, str_repeat( 'x', 2000 ) ) );
+$logger->error( new RuntimeException( str_repeat( 'y', 40 * 1024 * 1024 ) ) );
+$logger->assert( false, str_repeat( 'z', 30 * 1024 * 1024 ) );
+echo count( $logger->get_logs() );
+PHP;
+
+		$output = array();
+		$status = 1;
+		exec( escapeshellarg( PHP_BINARY ) . ' -d memory_limit=64M -r ' . escapeshellarg( $code ) . ' ' . escapeshellarg( $logger ) . ' 2>&1', $output, $status );
+
+		self::assertSame( 0, $status, implode( "\n", $output ) );
+		self::assertSame( '3', end( $output ) );
+	}
+
 	public function testFirstFailedMetricHourIsKeptForRetry(): void {
 		global $wpdb;
 

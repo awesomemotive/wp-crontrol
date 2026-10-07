@@ -165,6 +165,7 @@ class Logger {
 	 */
 	public function assert( $assertion, string $message = '', $value = null ): void {
 		$prefix = null;
+		$message = self::shorten( $message );
 
 		if ( $assertion ) {
 			$level = self::DEBUG;
@@ -244,8 +245,8 @@ class Logger {
 		if ( $message instanceof WP_Error ) {
 			$message = sprintf(
 				'WP_Error: %s (%s)',
-				$message->get_error_message(),
-				$message->get_error_code()
+				self::shorten( (string) $message->get_error_message() ),
+				self::shorten( (string) $message->get_error_code() )
 			);
 		}
 
@@ -253,7 +254,7 @@ class Logger {
 			$message = sprintf(
 				'%1$s: %2$s',
 				get_class( $message ),
-				$message->getMessage()
+				self::shorten( $message->getMessage() )
 			);
 		}
 
@@ -365,19 +366,27 @@ class Logger {
 	 * @param ?string $prefix
 	 */
 	protected static function interpolate( $message, array $context = array(), ?string $prefix = null ): string {
-		// build a replacement array with braces around the context keys
+		// Only the placeholders that appear in the message are resolved, so a large context
+		// costs nothing beyond what ends up in the message.
 		$replace = array();
 
-		foreach ( $context as $key => $val ) {
-			// check that the value can be casted to string
-			if ( is_bool( $val ) ) {
-				$replace[ "{{$key}}" ] = ( $val ? 'true' : 'false' );
-			} elseif ( is_scalar( $val ) ) {
-				$replace[ "{{$key}}" ] = self::shorten( (string) $val );
-			} elseif ( is_object( $val ) ) {
-				$replace[ "{{$key}}" ] = sprintf( '[%s]', get_class( $val ) );
-			} else {
-				$replace[ "{{$key}}" ] = sprintf( '[%s]', gettype( $val ) );
+		if ( $context && preg_match_all( '/\{([^{}\s]+)\}/', $message, $matches ) ) {
+			foreach ( array_unique( $matches[1] ) as $key ) {
+				if ( ! array_key_exists( $key, $context ) ) {
+					continue;
+				}
+
+				$val = $context[ $key ];
+
+				if ( is_bool( $val ) ) {
+					$replace[ "{{$key}}" ] = ( $val ? 'true' : 'false' );
+				} elseif ( is_scalar( $val ) ) {
+					$replace[ "{{$key}}" ] = self::shorten( (string) $val );
+				} elseif ( is_object( $val ) ) {
+					$replace[ "{{$key}}" ] = sprintf( '[%s]', get_class( $val ) );
+				} else {
+					$replace[ "{{$key}}" ] = sprintf( '[%s]', gettype( $val ) );
+				}
 			}
 		}
 
