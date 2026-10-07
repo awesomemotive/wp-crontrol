@@ -23,6 +23,12 @@ class URLEventIntegrityTest extends Test {
 
 		self::assertFalse( check_integrity( $value, url_hash( $value ) ) );
 
+		// A prefix in the hashed message would not be enough: the attacker controls the URL text,
+		// so it must not be possible to find any PHP code whose hash equals a URL hash.
+		self::assertFalse( check_integrity( 'crontrol-url|' . $value, url_hash( $value ) ) );
+		self::assertFalse( check_integrity( 'crontrol-url-event' . $value, url_hash( $value ) ) );
+		self::assertNotSame( strlen( wp_hash( $value ) ), strlen( url_hash( $value ) ) );
+
 		$event = Event::create(
 			PHPCronEvent::HOOK_NAME,
 			time() + 3600,

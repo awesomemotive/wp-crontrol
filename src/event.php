@@ -505,14 +505,17 @@ function check_integrity( $value, $stored_hash ): bool {
 /**
  * Returns the integrity hash for a URL cron event's URL.
  *
- * URL hashes carry a prefix so that a hash created for a URL can never pass the integrity
- * check for a PHP cron event's code, which uses an unprefixed hash.
+ * URL hashes use their own key, derived from the auth salt, and a different algorithm from the
+ * hashes for PHP cron events. A hash created for a URL can therefore never pass the integrity
+ * check for a PHP cron event's code, whatever text is saved as the URL.
  *
  * @param string $url The URL.
  * @return string The hash.
  */
 function url_hash( $url ): string {
-	return wp_hash( 'crontrol-url|' . $url );
+	$key = hash_hmac( 'sha256', 'crontrol-url-event', wp_salt( 'auth' ) );
+
+	return hash_hmac( 'sha256', $url, $key );
 }
 
 /**
