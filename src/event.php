@@ -514,7 +514,7 @@ function get_hook_name_label( string $hook, array $args ): string {
 }
 
 /**
- * Returns the HTML for an event's arguments, or null when the event type has nothing to show.
+ * Returns the escaped HTML for an event's arguments, or null when the event type has nothing to show.
  *
  * @param string  $hook The hook name.
  * @param mixed[] $args The event arguments.
@@ -527,7 +527,7 @@ function get_hook_args_display( string $hook, array $args ): ?string {
 
 	$display = Event::create( $hook, 0, '', $args, null, null )->get_args_display();
 
-	return ( '' === $display ) ? null : $display;
+	return ( '' === $display ) ? null : '<pre>' . esc_html( $display ) . '</pre>';
 }
 
 /**

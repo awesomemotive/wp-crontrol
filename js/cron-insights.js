@@ -77,7 +77,10 @@
 				// replace ` (` with a <br>:
 				const labelParts = item.text.split( ' (' );
 				if ( labelParts.length > 1 ) {
-					label.innerHTML = labelParts[ 0 ] + '<br>(' + labelParts[ 1 ];
+					label.textContent = '';
+					label.appendChild( document.createTextNode( labelParts[ 0 ] ) );
+					label.appendChild( document.createElement( 'br' ) );
+					label.appendChild( document.createTextNode( '(' + labelParts.slice( 1 ).join( ' (' ) ) );
 				}
 
 				button.appendChild( swatch );

@@ -82,6 +82,10 @@ class LogsCommand extends WP_CLI_Command {
 	 * @when after_wp_load
 	 */
 	public function list( $args, $assoc_args ): void {
+		if ( ! \Crontrol\Pro\tables_ready() ) {
+			\WP_CLI::error( 'Cron event logging has not been turned on for this site, so there are no logs.' );
+		}
+
 		$default_fields = 'ID,started_at,hook,status,duration,memory,db_queries';
 
 		if ( is_multisite() ) {
@@ -166,6 +170,10 @@ class LogsCommand extends WP_CLI_Command {
 	 * @when after_wp_load
 	 */
 	public function clear( $args, $assoc_args ): void {
+		if ( ! \Crontrol\Pro\tables_ready() ) {
+			\WP_CLI::error( 'Cron event logging has not been turned on for this site, so there are no logs.' );
+		}
+
 		// Suppress unused parameter warning
 		unset( $args );
 		$network = isset( $assoc_args['network'] );

@@ -9,6 +9,7 @@ use DateTimeImmutable;
 use DateTimeZone;
 
 final class LogQueryBuilderTest extends Test {
+	#[\Override]
 	public static function setUpBeforeClass(): void {
 		parent::setUpBeforeClass();
 
@@ -26,7 +27,7 @@ final class LogQueryBuilderTest extends Test {
 			$event->hook = $hooks[ $i % 3 ];
 			$event->actions = [ 'test_action_' . $i ];
 			$event->schedule = $i % 2 === 0 ? 'hourly' : 'daily';
-			$event->args = [ 'test' => $i ];
+			$event->args = [ $i ];
 			$event->status = $statuses[ $i % 3 ];
 			$event->started_at = $base_time->modify( '+' . $i . ' minutes' );
 			$event->scheduled_at = $base_time->modify( '+' . ( $i - 5 ) . ' minutes' );
@@ -39,6 +40,7 @@ final class LogQueryBuilderTest extends Test {
 		}
 	}
 
+	#[\Override]
 	public static function tearDownAfterClass(): void {
 		// Clean up test data by truncating the table
 		EventRunModel::truncate();
@@ -49,29 +51,22 @@ final class LogQueryBuilderTest extends Test {
 		$query = new QueryBuilder( EventRunModel::class );
 		$results = $query->per_page( 5 )->get();
 
-		$this->assertIsArray( $results );
 		$this->assertCount( 5, $results );
 		$this->assertContainsOnlyInstancesOf( EventRun::class, $results );
 
 		// Verify properties are properly typed
 		$first = $results[0];
-		$this->assertIsInt( $first->ID );
-		$this->assertIsString( $first->hook );
-		$this->assertIsArray( $first->args );
 		$this->assertInstanceOf( DateTimeImmutable::class, $first->started_at );
-		$this->assertIsBool( $first->fatal );
 	}
 
 	public function testGetRawReturnsArrays(): void {
 		$query = new QueryBuilder( EventRunModel::class );
 		$results = $query->per_page( 5 )->get_raw();
 
-		$this->assertIsArray( $results );
 		$this->assertCount( 5, $results );
 
 		// Verify each result is an array with expected keys
 		$first = $results[0];
-		$this->assertIsArray( $first );
 		$this->assertArrayHasKey( 'ID', $first );
 		$this->assertArrayHasKey( 'hook', $first );
 		$this->assertArrayHasKey( 'status', $first );
@@ -184,7 +179,6 @@ final class LogQueryBuilderTest extends Test {
 		// Test get_raw with before pagination
 		$page1 = $query->per_page( 3 )->before( 0 )->get_raw();
 		$this->assertCount( 3, $page1 );
-		$this->assertIsArray( $page1[0] );
 		$this->assertArrayHasKey( 'ID', $page1[0] );
 
 		// Get next page
@@ -218,13 +212,11 @@ final class LogQueryBuilderTest extends Test {
 
 		// Query for non-existent hook
 		$results = $query->where( 'hook', QueryBuilder::OPERATOR_EQUALS, 'non_existent_hook' )->get();
-		$this->assertIsArray( $results );
 		$this->assertEmpty( $results );
 
 		// Same for get_raw
 		$query2 = new QueryBuilder( EventRunModel::class );
 		$raw_results = $query2->where( 'hook', QueryBuilder::OPERATOR_EQUALS, 'non_existent_hook' )->get_raw();
-		$this->assertIsArray( $raw_results );
 		$this->assertEmpty( $raw_results );
 	}
 

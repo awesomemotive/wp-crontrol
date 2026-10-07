@@ -103,11 +103,18 @@ function init_hooks(): void {
 function on_init(): void {
 	$maintenance_context = is_admin() || wp_doing_cron() || ( defined( 'WP_CLI' ) && WP_CLI );
 
-	if ( $maintenance_context && is_main_site() ) {
+	// Front-end requests never run cron events, so they don't need to read any logging settings.
+	if ( ! $maintenance_context && ! Log::is_cron_context() ) {
+		return;
+	}
+
+	$logging = (bool) Log::get_enabled_hooks();
+
+	if ( $maintenance_context && ( $logging || is_main_site() ) ) {
 		maybe_schedule_jobs();
 	}
 
-	if ( ! Log::get_enabled_hooks() ) {
+	if ( ! $logging ) {
 		return;
 	}
 
@@ -121,9 +128,12 @@ function on_init(): void {
 }
 
 /**
- * Schedules the metrics and maintenance events on the main site once the log tables exist.
+ * Schedules the metrics and maintenance events once the log tables exist.
  *
- * The tables are shared by every site in a network, so both jobs work network-wide.
+ * They're scheduled on the main site and on every site that logs events, so they still run when
+ * WP Crontrol is only active on some sites of a network. The tables are shared by every site, and
+ * both jobs work network-wide and are safe to run more than once: metrics skip hours that are
+ * already aggregated, and pruning only removes what's over the limits.
  */
 function maybe_schedule_jobs(): void {
 	if ( ! tables_ready() ) {

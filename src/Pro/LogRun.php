@@ -33,8 +33,9 @@ final class LogRun {
 
 	/**
 	 * HTTP requests made during the event run, keyed by an internal request key.
+	 * Only the method and whether the request failed are kept.
 	 *
-	 * @var array<string, array<string, mixed>>
+	 * @var array<string, array{method: string, failed: bool}>
 	 */
 	public array $https = array();
 

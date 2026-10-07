@@ -9,7 +9,6 @@ namespace Crontrol\Pro;
 
 use Throwable;
 use Exception;
-use WP_Error;
 
 /**
  * Main class which encapsulates cron event logging functionality.
@@ -41,6 +40,13 @@ class Log {
 	private bool $listening = false;
 
 	/**
+	 * The start and end callbacks attached to each observed hook.
+	 *
+	 * @var array<string, array{0: \Closure, 1: \Closure}>
+	 */
+	private array $observers = array();
+
+	/**
 	 * Sets up actions and filters for the cron event logging.
 	 */
 	public function init(): void {
@@ -63,8 +69,23 @@ class Log {
 	 * @param string $hook Hook name to observe.
 	 */
 	public function observe( string $hook ): void {
-		add_action( $hook, array( $this, 'log_start' ), -9999, 99 );
-		add_action( $hook, array( $this, 'log_end' ), 9999, 0 );
+		if ( isset( $this->observers[ $hook ] ) ) {
+			return;
+		}
+
+		// The callbacks know which hook they belong to, rather than relying on current_filter(),
+		// which WordPress leaves wrong when an exception escapes a nested hook.
+		$start = function ( ...$hook_args ) use ( $hook ): void {
+			$this->log_start( $hook, $hook_args );
+		};
+		$end = function () use ( $hook ): void {
+			$this->log_end( $hook );
+		};
+
+		add_action( $hook, $start, -9999, 99 );
+		add_action( $hook, $end, 9999, 0 );
+
+		$this->observers[ $hook ] = array( $start, $end );
 	}
 
 	/**
@@ -73,8 +94,14 @@ class Log {
 	 * @param string $hook Hook name.
 	 */
 	public function unobserve( string $hook ): void {
-		remove_action( $hook, array( $this, 'log_start' ), -9999 );
-		remove_action( $hook, array( $this, 'log_end' ), 9999 );
+		if ( ! isset( $this->observers[ $hook ] ) ) {
+			return;
+		}
+
+		remove_action( $hook, $this->observers[ $hook ][0], -9999 );
+		remove_action( $hook, $this->observers[ $hook ][1], 9999 );
+
+		unset( $this->observers[ $hook ] );
 	}
 
 	/**
@@ -146,8 +173,8 @@ class Log {
 	}
 
 	/**
-	 * Removes credentials, the query string and the fragment from a URL before it is logged,
-	 * because they often carry API keys and tokens.
+	 * Reduces a URL to its scheme, host and port before it is logged, because credentials, paths,
+	 * query strings and fragments often carry API keys and tokens.
 	 *
 	 * @param string $url The URL.
 	 * @return string The URL without sensitive parts.
@@ -165,10 +192,10 @@ class Log {
 			$redacted .= ':' . $parts['port'];
 		}
 
-		$redacted .= $parts['path'] ?? '';
+		$path = $parts['path'] ?? '';
 
-		if ( isset( $parts['query'] ) || isset( $parts['fragment'] ) ) {
-			$redacted .= '?[redacted]';
+		if ( ( '' !== $path && '/' !== $path ) || isset( $parts['query'] ) || isset( $parts['fragment'] ) ) {
+			$redacted .= '/[redacted]';
 		}
 
 		return $redacted;
@@ -205,11 +232,11 @@ class Log {
 
 		$key = microtime( true ) . '|' . count( $current->https );
 
+		// Only a little metadata is kept per request. Responses are never held on to, so that
+		// logging doesn't add to the memory used by events that fetch large responses.
 		$current->https[ $key ] = array(
-			'url'      => self::redact_url( $url ),
-			'method'   => $args['method'] ?? 'GET',
-			'start'    => microtime( true ),
-			'response' => new WP_Error( 'crontrol_who_knows', __( 'Request failed', 'wp-crontrol' ) ),
+			'method' => is_string( $args['method'] ?? null ) ? $args['method'] : 'GET',
+			'failed' => true,
 		);
 		$args['_crontrol_key'] = $key;
 
@@ -252,8 +279,7 @@ class Log {
 			return;
 		}
 
-		$current->https[ $key ]['end']      = microtime( true );
-		$current->https[ $key ]['response'] = $response;
+		$current->https[ $key ]['failed'] = $this->is_http_failure( $response );
 
 		$method = $current->https[ $key ]['method'];
 		$safe   = self::redact_url( $url );
@@ -502,17 +528,16 @@ class Log {
 	/**
 	 * Starts the logging for the current cron event.
 	 *
-	 * @param mixed ...$hook_args The arguments passed to the hook.
+	 * @param string  $hook      The hook name.
+	 * @param mixed[] $hook_args The arguments passed to the hook.
 	 */
-	public function log_start( ...$hook_args ): void {
+	public function log_start( string $hook, array $hook_args = array() ): void {
 		global $wpdb;
 
 		if ( ! self::is_cron_context() ) {
 			$this->stack[] = null;
 			return;
 		}
-
-		$hook = (string) current_filter();
 
 		/**
 		 * Filters whether the arguments of a cron event are stored in its log entry.
@@ -576,25 +601,52 @@ class Log {
 
 	/**
 	 * Ends the logging for the current cron event.
+	 *
+	 * If a logged hook inside this one threw an exception that was caught before reaching this
+	 * point, its run never ended. Those runs are found above this one on the stack and are
+	 * recorded as having ended early.
+	 *
+	 * @param string $hook The hook name.
 	 */
-	public function log_end(): void {
-		if ( ! $this->stack ) {
+	public function log_end( string $hook ): void {
+		$index = null;
+
+		for ( $i = count( $this->stack ) - 1; $i >= 0; $i-- ) {
+			$frame = $this->stack[ $i ];
+
+			if ( null === $frame || $frame->hook === $hook ) {
+				$index = $i;
+				break;
+			}
+		}
+
+		if ( null === $index ) {
 			return;
+		}
+
+		while ( count( $this->stack ) > $index + 1 ) {
+			$abandoned = array_pop( $this->stack );
+
+			if ( $abandoned instanceof LogRun && ! $abandoned->ended ) {
+				$abandoned->run->errors[] = array(
+					'level'   => Logger::ERROR,
+					'message' => __( 'The run ended early because an exception was thrown and caught by the code that fired this hook.', 'wp-crontrol' ),
+				);
+				$this->finish( $abandoned, true );
+			}
 		}
 
 		$state = array_pop( $this->stack );
 
 		if ( $state instanceof LogRun && ! $state->ended ) {
 			$this->finish( $state );
-
-			$outer = $this->current();
-
-			if ( $outer ) {
-				$outer->logger->init();
-			}
 		}
 
-		if ( ! $this->current() ) {
+		$outer = $this->current();
+
+		if ( $outer ) {
+			$outer->logger->init();
+		} else {
 			$this->stop_listening();
 		}
 	}
@@ -602,9 +654,10 @@ class Log {
 	/**
 	 * Writes the final record for a run.
 	 *
-	 * @param LogRun $state The run.
+	 * @param LogRun $state   The run.
+	 * @param bool   $errored Whether the run is known to have failed.
 	 */
-	private function finish( LogRun $state ): void {
+	private function finish( LogRun $state, bool $errored = false ): void {
 		global $wpdb;
 
 		$state->ended = true;
@@ -622,13 +675,13 @@ class Log {
 
 		$has_http_warning = false;
 		foreach ( $state->https as $http ) {
-			if ( $this->is_http_failure( $http['response'] ) ) {
+			if ( $http['failed'] ) {
 				$has_http_warning = true;
 			}
 		}
 
-		$has_warning = false;
-		$has_error = false;
+		$has_warning = $errored;
+		$has_error = $errored;
 
 		foreach ( $state->logger->get_logs() as $log ) {
 			$entry = array(
@@ -699,8 +752,9 @@ class Log {
 			'name' => isset( $first['name'] ) && is_string( $first['name'] ) ? $first['name'] : '',
 		);
 
-		if ( \Crontrol\Event\URLCronEvent::HOOK_NAME === $hook && isset( $first['url'] ) && is_string( $first['url'] ) ) {
-			$keep['url'] = self::redact_url( $first['url'] );
+		if ( \Crontrol\Event\URLCronEvent::HOOK_NAME === $hook ) {
+			$keep['url'] = self::redact_url( isset( $first['url'] ) && is_string( $first['url'] ) ? $first['url'] : '' );
+			$keep['method'] = \Crontrol\Event\url_method( $first['method'] ?? 'GET' );
 		}
 
 		return array( $keep );

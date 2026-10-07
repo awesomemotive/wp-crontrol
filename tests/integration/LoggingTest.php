@@ -171,10 +171,90 @@ final class LoggingTest extends Test {
 		self::assertSame( EventRun::STATUS_COMPLETED, $outer[0]->status );
 	}
 
-	public function testLoggedURLsHaveNoQueryString(): void {
-		self::assertSame( 'https://api.example.com/v1/items?[redacted]', Log::redact_url( 'https://user:pass@api.example.com/v1/items?key=secret#frag' ) );
-		self::assertSame( 'http://example.com:8080/path', Log::redact_url( 'http://example.com:8080/path' ) );
+	public function testLoggedURLsKeepOnlyTheOrigin(): void {
+		self::assertSame( 'https://api.example.com/[redacted]', Log::redact_url( 'https://user:pass@api.example.com/v1/items?key=secret#frag' ) );
+		self::assertSame( 'http://example.com:8080/[redacted]', Log::redact_url( 'http://example.com:8080/webhooks/secret-token' ) );
+		self::assertSame( 'https://example.com', Log::redact_url( 'https://example.com/' ) );
 		self::assertSame( '[redacted URL]', Log::redact_url( 'not a url' ) );
+	}
+
+	public function testHTTPRequestsAreCountedWithoutSecrets(): void {
+		add_filter( 'crontrol/should_log', '__return_true' );
+		$this->observe( 'crontrol_test_http' );
+
+		add_action( 'crontrol_test_http', static function (): void {
+			wp_remote_get( 'http://httpbin/status/500?token=very-secret' );
+		} );
+
+		do_action( 'crontrol_test_http' );
+
+		$runs = $this->runs( 'crontrol_test_http' );
+
+		self::assertCount( 1, $runs );
+		self::assertSame( 1, $runs[0]->https );
+		self::assertTrue( $runs[0]->warning );
+		self::assertStringNotContainsString( 'very-secret', (string) wp_json_encode( array( $runs[0]->errors, $runs[0]->logs ) ) );
+		self::assertStringNotContainsString( '/status/', (string) wp_json_encode( array( $runs[0]->errors, $runs[0]->logs ) ) );
+	}
+
+	public function testCaughtExceptionInNestedHookDoesNotCorruptTheStack(): void {
+		add_filter( 'crontrol/should_log', '__return_true' );
+		$this->observe( 'crontrol_test_catch_outer' );
+		$this->observe( 'crontrol_test_catch_inner' );
+
+		add_action( 'crontrol_test_catch_outer', static function (): void {
+			try {
+				do_action( 'crontrol_test_catch_inner' );
+			} catch ( \RuntimeException $e ) {
+				// Caught by the code that fired the hook.
+			}
+		} );
+
+		add_action( 'crontrol_test_catch_inner', array( self::class, 'throw_inner_failure' ) );
+
+		$handler_before = set_exception_handler( null );
+		set_exception_handler( $handler_before );
+
+		do_action( 'crontrol_test_catch_outer' );
+
+		// do_action() leaves the inner hook on WordPress's own filter stack after the exception.
+		global $wp_current_filter;
+		$wp_current_filter = array_values( array_diff( $wp_current_filter, array( 'crontrol_test_catch_inner' ) ) );
+
+		$outer = $this->runs( 'crontrol_test_catch_outer' );
+		$inner = $this->runs( 'crontrol_test_catch_inner' );
+
+		self::assertCount( 1, $outer );
+		self::assertCount( 1, $inner );
+		self::assertSame( EventRun::STATUS_COMPLETED, $outer[0]->status );
+		self::assertSame( EventRun::STATUS_ERRORED, $inner[0]->status );
+
+		// Listeners and the exception handler are back to how they were.
+		self::assertFalse( has_filter( 'wp_mail', array( Log::get_instance(), 'filter_wp_mail' ) ) );
+		$handler_after = set_exception_handler( null );
+		set_exception_handler( $handler_after );
+		self::assertSame( $handler_before, $handler_after );
+
+		// A later run is unaffected.
+		do_action( 'crontrol_test_catch_outer' );
+		$wp_current_filter = array_values( array_diff( $wp_current_filter, array( 'crontrol_test_catch_inner' ) ) );
+		self::assertCount( 2, $this->runs( 'crontrol_test_catch_outer' ) );
+	}
+
+	public function testArgumentsDisplayIsEscaped(): void {
+		$html = \Crontrol\Event\get_hook_args_display(
+			\Crontrol\Event\URLCronEvent::HOOK_NAME,
+			array(
+				array(
+					'url'    => 'https://example.org/<img src=x onerror=alert(1)>',
+					'method' => 'GET',
+				),
+			)
+		);
+
+		self::assertIsString( $html );
+		self::assertStringNotContainsString( '<img', $html );
+		self::assertStringContainsString( '&lt;img', $html );
 	}
 
 	public function testPrunesOldEntries(): void {
@@ -188,5 +268,12 @@ final class LoggingTest extends Test {
 		EventRunModel::prune_sites( 30 );
 
 		self::assertCount( 1, $this->runs( 'crontrol_test_prune' ) );
+	}
+
+	/**
+	 * @throws \RuntimeException Always.
+	 */
+	public static function throw_inner_failure(): void {
+		throw new \RuntimeException( 'Inner failure' );
 	}
 }

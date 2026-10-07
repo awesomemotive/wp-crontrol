@@ -30,7 +30,9 @@ final class UninstallTest extends Test {
 		update_option( 'crontrol_log', array( 'some_hook' ) );
 		update_option( 'crontrol_log_all_hooks', array( 'some_hook' ), false );
 		wp_schedule_event( time() + 60, 'daily', 'crontrol/maintenance' );
-		update_user_meta( self::factory()->user->create(), 'crontrol_dismissed_promos', array( 'welcome' ) );
+		$user_id = self::factory()->user->create();
+		self::assertIsInt( $user_id );
+		update_user_meta( $user_id, 'crontrol_dismissed_promos', array( 'welcome' ) );
 
 		if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
 			define( 'WP_UNINSTALL_PLUGIN', 'wp-crontrol/wp-crontrol.php' );
