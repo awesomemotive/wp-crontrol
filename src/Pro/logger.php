@@ -258,17 +258,17 @@ class Logger {
 		}
 
 		if ( ! is_string( $message ) ) {
-			if ( null === $message ) {
-				$message = 'null';
-			} elseif ( false === $message ) {
-				$message = 'false';
-			} elseif ( true === $message ) {
-				$message = 'true';
-			}
-
-			$message = print_r( $message, true );
+			$message = self::describe( $message );
 		} elseif ( '' === trim( $message ) ) {
 			$message = '(Empty string)';
+		}
+
+		// Every part is shortened before the message is put together, so a large value can't use
+		// up memory on its way to being truncated.
+		$message = self::shorten( $message );
+
+		if ( null !== $prefix ) {
+			$prefix = self::shorten( $prefix );
 		}
 
 		$message = self::interpolate( $message, $context, $prefix );
@@ -299,6 +299,67 @@ class Logger {
 	}
 
 	/**
+	 * Shortens a string to the maximum message length.
+	 *
+	 * @param string $text The text.
+	 */
+	protected static function shorten( string $text ): string {
+		if ( strlen( $text ) <= self::$max_message_length ) {
+			return $text;
+		}
+
+		return substr( $text, 0, self::$max_message_length ) . ' [truncated]';
+	}
+
+	/**
+	 * Describes a value that isn't a string, without formatting all of it.
+	 *
+	 * Small arrays are shown in full; larger arrays and objects are summarised, so that logging a
+	 * large value doesn't use up memory.
+	 *
+	 * @param mixed $value The value.
+	 */
+	protected static function describe( $value ): string {
+		if ( null === $value ) {
+			return 'null';
+		}
+
+		if ( is_bool( $value ) ) {
+			return $value ? 'true' : 'false';
+		}
+
+		if ( is_scalar( $value ) ) {
+			return self::shorten( (string) $value );
+		}
+
+		if ( is_object( $value ) ) {
+			return sprintf( '[%s]', get_class( $value ) );
+		}
+
+		if ( is_array( $value ) ) {
+			$count = count( $value );
+			$parts = array();
+			$length = 0;
+
+			foreach ( $value as $key => $item ) {
+				$part = $key . ' => ' . ( is_array( $item ) ? sprintf( 'array(%d)', count( $item ) ) : self::describe( $item ) );
+				$length += strlen( $part );
+				$parts[] = $part;
+
+				if ( $length > self::$max_message_length || count( $parts ) >= 50 ) {
+					break;
+				}
+			}
+
+			$more = $count - count( $parts );
+
+			return sprintf( 'array(%d) { %s%s }', $count, implode( ', ', $parts ), $more > 0 ? sprintf( ', … %d more', $more ) : '' );
+		}
+
+		return sprintf( '[%s]', gettype( $value ) );
+	}
+
+	/**
 	 * @param string $message
 	 * @param array<string, mixed> $context
 	 * @param ?string $prefix
@@ -312,7 +373,7 @@ class Logger {
 			if ( is_bool( $val ) ) {
 				$replace[ "{{$key}}" ] = ( $val ? 'true' : 'false' );
 			} elseif ( is_scalar( $val ) ) {
-				$replace[ "{{$key}}" ] = $val;
+				$replace[ "{{$key}}" ] = self::shorten( (string) $val );
 			} elseif ( is_object( $val ) ) {
 				$replace[ "{{$key}}" ] = sprintf( '[%s]', get_class( $val ) );
 			} else {

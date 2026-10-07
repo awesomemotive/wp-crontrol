@@ -178,9 +178,14 @@ function metrics(): void {
 function aggregate_missing_metrics( \DateTimeImmutable $now ): void {
 	$current_hour = $now->setTime( (int) $now->format( 'G' ), 0, 0 );
 	$last_hour = get_site_option( 'crontrol_metrics_last_hour', '' );
-	$hour = is_string( $last_hour ) && '' !== $last_hour
-		? ( new \DateTimeImmutable( $last_hour, new \DateTimeZone( 'UTC' ) ) )->modify( '+1 hour' )
-		: $current_hour->modify( '-1 hour' );
+
+	if ( ! is_string( $last_hour ) || '' === $last_hour ) {
+		// Record the starting point before the first attempt, so a failure is retried later.
+		$last_hour = $current_hour->modify( '-2 hours' )->format( 'Y-m-d H:i:s' );
+		update_site_option( 'crontrol_metrics_last_hour', $last_hour );
+	}
+
+	$hour = ( new \DateTimeImmutable( $last_hour, new \DateTimeZone( 'UTC' ) ) )->modify( '+1 hour' );
 
 	if ( $hour < $current_hour->modify( '-48 hours' ) ) {
 		$hour = $current_hour->modify( '-48 hours' );
@@ -205,9 +210,13 @@ function aggregate_missing_metrics( \DateTimeImmutable $now ): void {
 
 	$today = $now->setTime( 0, 0, 0 );
 	$last_day = get_site_option( 'crontrol_metrics_last_day', '' );
-	$day = is_string( $last_day ) && '' !== $last_day
-		? ( new \DateTimeImmutable( $last_day, new \DateTimeZone( 'UTC' ) ) )->modify( '+1 day' )
-		: $today->modify( '-1 day' );
+
+	if ( ! is_string( $last_day ) || '' === $last_day ) {
+		$last_day = $today->modify( '-2 days' )->format( 'Y-m-d H:i:s' );
+		update_site_option( 'crontrol_metrics_last_day', $last_day );
+	}
+
+	$day = ( new \DateTimeImmutable( $last_day, new \DateTimeZone( 'UTC' ) ) )->modify( '+1 day' );
 
 	if ( $day < $today->modify( '-7 days' ) ) {
 		$day = $today->modify( '-7 days' );

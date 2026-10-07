@@ -355,6 +355,52 @@ final class LoggingTest extends Test {
 		delete_site_option( 'crontrol_metrics_last_day' );
 	}
 
+	public function testLargeValuesAreSummarisedNotFormatted(): void {
+		add_filter( 'crontrol/should_log', '__return_true' );
+		$this->observe( 'crontrol_test_large_value' );
+
+		add_action( 'crontrol_test_large_value', static function (): void {
+			do_action( 'crontrol/info', array_fill( 0, 20000, str_repeat( 'x', 100 ) ) );
+			do_action( 'crontrol/assert', false, 'Large assertion', array_fill( 0, 20000, 1 ) );
+		} );
+
+		do_action( 'crontrol_test_large_value' );
+
+		$runs = $this->runs( 'crontrol_test_large_value' );
+
+		self::assertCount( 1, $runs );
+		self::assertStringStartsWith( 'array(20000)', $runs[0]->logs[0]['message'] );
+		self::assertLessThan( 1100, strlen( $runs[0]->logs[0]['message'] ) );
+		self::assertStringContainsString( 'Assertion failed: Large assertion', $runs[0]->errors[0]['message'] );
+	}
+
+	public function testFirstFailedMetricHourIsKeptForRetry(): void {
+		global $wpdb;
+
+		delete_site_option( 'crontrol_metrics_last_hour' );
+		delete_site_option( 'crontrol_metrics_last_day' );
+
+		$fail = static function ( string $query ): string {
+			return ( 0 === strpos( ltrim( $query ), 'INSERT INTO' ) && false !== strpos( $query, 'crontrol_event_metrics' ) ) ? 'SELECT broken FROM' : $query;
+		};
+
+		$suppress = $wpdb->suppress_errors( true );
+		add_filter( 'query', $fail );
+		\Crontrol\Pro\aggregate_missing_metrics( new \DateTimeImmutable( '2032-01-02 12:30:00', new \DateTimeZone( 'UTC' ) ) );
+		remove_filter( 'query', $fail );
+		$wpdb->suppress_errors( $suppress );
+
+		// The hour before 11:00 is recorded, so 11:00 is tried again on the next run.
+		self::assertSame( '2032-01-02 10:00:00', get_site_option( 'crontrol_metrics_last_hour' ) );
+
+		\Crontrol\Pro\aggregate_missing_metrics( new \DateTimeImmutable( '2032-01-02 13:30:00', new \DateTimeZone( 'UTC' ) ) );
+
+		self::assertSame( '2032-01-02 12:00:00', get_site_option( 'crontrol_metrics_last_hour' ) );
+
+		delete_site_option( 'crontrol_metrics_last_hour' );
+		delete_site_option( 'crontrol_metrics_last_day' );
+	}
+
 	public function testLogDetailsAreBounded(): void {
 		$entries = array();
 
