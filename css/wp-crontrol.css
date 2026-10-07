@@ -98,7 +98,7 @@ table.wp-list-table {
 }
 
 .column-crontrol_time,
-.column-crontrol_ran,
+.column-crontrol_pro_last_run,
 .column-crontrol_next {
 	white-space: nowrap;
 }
@@ -127,4 +127,119 @@ input[type="time"][step="1"] {
 
 #crontrol-event-not-found {
 	margin-top: 2em;
+}
+
+.crontrol-callout-container {
+	position: relative;
+}
+
+.crontrol-callout-background {
+	pointer-events: none;
+	user-select: none;
+}
+
+.crontrol-callout-background .tablenav {
+	display: none;
+}
+
+.crontrol-callout-background tbody td {
+	filter: blur(2px);
+}
+
+.crontrol-callout-foreground {
+	background: #fff;
+	border: 2px solid var(--wp-admin-theme-color, #2271b1 );
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 50px;
+	position: absolute;
+	top: 10%;
+	right: 20%;
+	left: 20%;
+	text-align: center;
+	box-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+}
+
+.crontrol-callout-foreground h2 {
+	font-size: 1.6em;
+	color: #444;
+	line-height: 1.5em;
+	margin: 60px 0 40px;
+	font-weight: 500;
+}
+
+.crontrol-callout-foreground h3 {
+	font-size: 1.6em;
+	font-weight: 500;
+	line-height: 1.5em;
+}
+
+.crontrol-callout-foreground p,
+.crontrol-callout-foreground li {
+	font-size: 1.2em;
+	line-height: 1.4em;
+}
+
+.crontrol-callout-foreground ul {
+	margin: 40px 0;
+}
+
+.crontrol-callout-foreground li .dashicons-yes {
+	color: var(--wp-admin-theme-color, #2271b1 );
+	font-size: 1.2em;
+	line-height: 1.2em;
+	margin-right: 5px;
+	display: inline-block;
+}
+
+.crontrol-callout-foreground .crontrol-logo {
+	position: absolute;
+	top: -52px;
+	left: calc(50% - 52px);
+	background: #fff;
+	box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+	width: 100px;
+	height: 100px;
+}
+
+.crontrol-callout-foreground .crontrol-pro-go {
+	margin: 60px 0 20px;
+}
+
+.crontrol-callout-foreground a.button.button-hero {
+	font-size: 1em;
+}
+
+.nav-tab .crontrol-tab-pill {
+	background: var(--wp-admin-theme-color, #2271b1 );
+	border-radius: 10px;
+	color: #fff;
+	display: inline-block;
+	font-size: 9px;
+	font-weight: 600;
+	line-height: 1.3;
+	margin-left: 4px;
+	padding: 2px 7px;
+	text-transform: uppercase;
+	vertical-align: text-top;
+}
+
+@keyframes rotator {
+	from {
+		transform: rotate( 0deg );
+	}
+	to {
+		transform: rotate( 360deg );
+	}
+}
+
+.crontrol-rotating {
+	animation: rotator 3s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.crontrol-rotating {
+		animation: none;
+	}
 }

@@ -16,6 +16,7 @@ use Crontrol\Exception\InvalidHashException;
 use Crontrol\Exception\UnexpectedHTTPCodeException;
 use Crontrol\Exception\HTTPFailedException;
 use Crontrol\Exception\UnknownScheduleException;
+use DateTimeImmutable;
 use DateTimeZone;
 use WP_Error;
 use Exception;
@@ -58,7 +59,7 @@ function init_hooks() {
 
 	add_action( 'init',                               __NAMESPACE__ . '\action_init' );
 	add_action( 'admin_init',                         __NAMESPACE__ . '\action_handle_posts' );
-	add_action( 'admin_menu',                         __NAMESPACE__ . '\action_admin_menu' );
+	add_action( 'admin_menu',                         __NAMESPACE__ . '\action_admin_menu', 98 );
 	add_filter( "plugin_action_links_{$plugin_file}", __NAMESPACE__ . '\plugin_action_links' );
 	add_filter( "network_admin_plugin_action_links_{$plugin_file}", __NAMESPACE__ . '\network_plugin_action_links' );
 	add_filter( 'removable_query_args',               __NAMESPACE__ . '\filter_removable_query_args' );
@@ -1036,6 +1037,13 @@ function action_admin_menu() {
 		'wp-crontrol',
 		__NAMESPACE__ . '\admin_manage_page'
 	);
+	$tabs[] = add_management_page(
+		esc_html__( 'Cron Logs', 'wp-crontrol' ),
+		esc_html__( 'Cron Logs', 'wp-crontrol' ),
+		'manage_options',
+		'wp-crontrol-logs',
+		__NAMESPACE__ . '\admin_logs_page'
+	);
 
 	foreach ( $tabs as $tab ) {
 		add_action( "load-{$tab}", __NAMESPACE__ . '\admin_help_tab' );
@@ -1126,6 +1134,11 @@ function plugin_action_links( $actions ) {
 			'<a href="%s">%s</a>',
 			esc_url( admin_url( 'options-general.php?page=wp-crontrol-schedules' ) ),
 			esc_html__( 'Cron Schedules', 'wp-crontrol' )
+		),
+		'crontrol-logs' => sprintf(
+			'<a href="%s">%s</a>',
+			esc_url( admin_url( 'tools.php?page=wp-crontrol-logs' ) ),
+			esc_html__( 'Cron Logs', 'wp-crontrol' )
 		),
 		'crontrol-help' => sprintf(
 			'<a href="%s">%s</a>',
@@ -2137,9 +2150,20 @@ function admin_manage_page() {
 			}
 		}
 
+		$messages = apply_filters( 'crontrol/event_admin_messages', $messages, $hook, $message );
+
 		wp_admin_notice(
 			sprintf(
-				esc_html( $messages[ $message ][0] ),
+				wp_kses(
+					$messages[ $message ][0],
+					array(
+						'a' => array(
+							'href' => true,
+						),
+						'br' => array(
+						),
+					)
+				),
 				'<strong>' . esc_html( $hook ) . '</strong>'
 			),
 			array(
@@ -2205,6 +2229,66 @@ function admin_manage_page() {
 }
 
 /**
+ * Displays the Cron Logs page for the plugin.
+ *
+ * @return void
+ */
+function admin_logs_page() {
+	$table = new Logs\Table();
+	$table->prepare_items();
+	$pro_installed = file_exists( WP_PLUGIN_DIR . '/wp-crontrol-pro/wp-crontrol-pro.php' );
+
+	dismiss_pointer( 'wp-crontrol-logs' );
+
+	?>
+	<div class="wrap">
+		<?php do_tabs(); ?>
+
+		<h1 class="wp-heading-inline"><?php esc_html_e( 'Cron Logs', 'wp-crontrol' ); ?></h1>
+
+		<hr class="wp-header-end">
+
+		<?php if ( $pro_installed ) { ?>
+			<div id="crontrol-pro-notice" class="notice notice-info">
+				<p>
+					<?php esc_html_e( 'Activate the WP Crontrol Pro plugin to access the cron event logs.', 'wp-crontrol' ); ?>
+				</p>
+			</div>
+		<?php } else { ?>
+
+			<div class="crontrol-callout-container">
+				<div class="crontrol-callout-background" aria-hidden="true">
+					<div class="table-responsive">
+						<?php $table->display(); ?>
+					</div>
+				</div>
+				<div class="crontrol-callout-foreground">
+					<div>
+						<div class="crontrol-logo" aria-hidden="true">
+							<?php readfile( plugin_dir_path( PLUGIN_FILE ) . '.wordpress-org/icon.svg' ); ?>
+						</div>
+						<h2><a href="https://wp-crontrol.com/pro/">Cron event logging is a brand new feature available in WP Crontrol Pro</a></h2>
+						<h3>You have no idea what the scheduled cron events on your site are doing.<br>WP Crontrol Pro logs them and shows you.</h3>
+						<ul>
+							<li><span class="dashicons dashicons-yes" aria-hidden="true"></span> See when events run and monitor performance metrics</li>
+							<li><span class="dashicons dashicons-yes" aria-hidden="true"></span> Save hours or days of manual investigation</li>
+							<li><span class="dashicons dashicons-yes" aria-hidden="true"></span> Get alerted to warnings and errors</li>
+							<li><span class="dashicons dashicons-yes" aria-hidden="true"></span> Identify and debug events that miss their schedule</li>
+							<li><span class="dashicons dashicons-yes" aria-hidden="true"></span> Identify daily or weekly hotspots</li>
+						</ul>
+						<p>WP Crontrol Pro is a new add-on for WP Crontrol, with many more features planned for the future.</p>
+						<p class="crontrol-pro-go">
+							<a href="https://wp-crontrol.com/pro/" class="button button-primary button-hero">Get WP Crontrol Pro &rarr;</a>
+						</p>
+					</div>
+				</div>
+			</div>
+		<?php } ?>
+	</div>
+	<?php
+}
+
+/**
  * Get the states of the various cron-related tabs.
  *
  * @return array<string,bool> Array of states keyed by tab name.
@@ -2213,6 +2297,7 @@ function get_tab_states() {
 	$tabs = array(
 		'events'     => ( ! empty( $_GET['page'] ) && 'wp-crontrol' === $_GET['page'] && empty( $_GET['crontrol_action'] ) ),
 		'schedules'  => ( ! empty( $_GET['page'] ) && 'wp-crontrol-schedules' === $_GET['page'] ),
+		'logs'       => ( ! empty( $_GET['page'] ) && 'wp-crontrol-logs' === $_GET['page'] ),
 		'add-event'  => ( ! empty( $_GET['crontrol_action'] ) && 'new-cron' === $_GET['crontrol_action'] ),
 		'edit-event' => ( ! empty( $_GET['crontrol_action'] ) && 'edit-cron' === $_GET['crontrol_action'] ),
 	);
@@ -2220,6 +2305,82 @@ function get_tab_states() {
 	$tabs = apply_filters( 'crontrol/tabs', $tabs );
 
 	return $tabs;
+}
+
+/**
+ * Returns the list of tab IDs that the current user has already seen.
+ *
+ * Used to determine whether a "New" pill should be displayed on a tab.
+ *
+ * @return array<int,string> Array of tab IDs.
+ */
+function get_seen_tabs() {
+	$seen = get_user_meta( get_current_user_id(), 'crontrol_seen_tabs', true );
+
+	if ( ! is_array( $seen ) ) {
+		$seen = array();
+	}
+
+	return $seen;
+}
+
+/**
+ * Marks the given tab as seen by the current user.
+ *
+ * @param string $id The tab ID.
+ * @return void
+ */
+function mark_tab_seen( $id ) {
+	$user_id = get_current_user_id();
+
+	if ( ! $user_id ) {
+		return;
+	}
+
+	$seen = get_seen_tabs();
+
+	if ( in_array( $id, $seen, true ) ) {
+		return;
+	}
+
+	$seen[] = $id;
+
+	update_user_meta( $user_id, 'crontrol_seen_tabs', $seen );
+}
+
+/**
+ * Determines whether the given pointer has been dismissed by the current user.
+ *
+ * @param string $pointer The pointer ID.
+ * @return bool Whether the pointer has been dismissed.
+ */
+function is_pointer_dismissed( $pointer ) {
+	$dismissed = array_filter( explode( ',', (string) get_user_meta( get_current_user_id(), 'dismissed_wp_pointers', true ) ) );
+
+	return in_array( $pointer, $dismissed, true );
+}
+
+/**
+ * Marks the given pointer as dismissed for the current user.
+ *
+ * @param string $pointer The pointer ID.
+ * @return void
+ */
+function dismiss_pointer( $pointer ) {
+	$user_id = get_current_user_id();
+
+	if ( ! $user_id ) {
+		return;
+	}
+
+	if ( is_pointer_dismissed( $pointer ) ) {
+		return;
+	}
+
+	$dismissed   = array_filter( explode( ',', (string) get_user_meta( $user_id, 'dismissed_wp_pointers', true ) ) );
+	$dismissed[] = $pointer;
+
+	update_user_meta( $user_id, 'dismissed_wp_pointers', implode( ',', $dismissed ) );
 }
 
 /**
@@ -2242,6 +2403,10 @@ function do_tabs() {
 			'tools.php?page=wp-crontrol',
 			__( 'Cron Events', 'wp-crontrol' ),
 		),
+		'logs' => array(
+			'tools.php?page=wp-crontrol-logs',
+			__( 'Cron Logs', 'wp-crontrol' ),
+		),
 		'schedules' => array(
 			'options-general.php?page=wp-crontrol-schedules',
 			__( 'Cron Schedules', 'wp-crontrol' ),
@@ -2250,26 +2415,44 @@ function do_tabs() {
 
 	$links = apply_filters( 'crontrol/links', $links );
 
+	$seen_tabs = get_seen_tabs();
+
 	?>
 	<div id="crontrol-header">
 		<nav class="nav-tab-wrapper" aria-label="<?php echo esc_attr( __( 'Secondary menu', 'wp-crontrol' ) ); ?>">
 			<?php
 			foreach ( $links as $id => $link ) {
-				if ( ! empty( $tabs[ $id ] ) ) {
-					printf(
-						'<a href="%1$s" class="nav-tab nav-tab-active" aria-current="page" id="crontrol_tab_%2$s">%3$s</a>',
-						esc_url( $link[0] ),
-						esc_attr( $id ),
-						esc_html( $link[1] )
-					);
-				} else {
-					printf(
-						'<a href="%1$s" class="nav-tab" id="crontrol_tab_%2$s">%3$s</a>',
-						esc_url( $link[0] ),
-						esc_attr( $id ),
-						esc_html( $link[1] )
-					);
+				$is_active = ! empty( $tabs[ $id ] );
+				$is_new    = ! empty( $link[2] ) && ! in_array( $id, $seen_tabs, true );
+				$has_error = ! empty( $link[3] );
+				$label     = esc_html( $link[1] );
+
+				if ( $is_new ) {
+					if ( $is_active ) {
+						// Mark the tab as seen once the user is viewing it.
+						add_action( 'admin_footer', static function () use ( $id ) {
+							mark_tab_seen( $id );
+						} );
+					} else {
+						$label .= sprintf(
+							' <span class="crontrol-tab-pill">%s</span>',
+							esc_html__( 'New', 'wp-crontrol' )
+						);
+					}
 				}
+
+				if ( $has_error ) {
+					$label .= ' <span class="status-crontrol-error"><span class="dashicons dashicons-warning" aria-hidden="true"></span></span>';
+				}
+
+				printf(
+					'<a href="%1$s" class="nav-tab%4$s"%5$s id="crontrol_tab_%2$s">%3$s</a>',
+					esc_url( $link[0] ),
+					esc_attr( $id ),
+					$label, // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- $label is escaped above.
+					$is_active ? ' nav-tab-active' : '',
+					$is_active ? ' aria-current="page"' : ''
+				);
 			}
 
 			if ( $tabs['add-event'] ) {
@@ -2319,6 +2502,14 @@ function get_hook_callbacks( $name ) {
 				$callback = populate_callback( $callback );
 
 				if ( __NAMESPACE__ . '\\pauser()' === $callback['name'] ) {
+					continue;
+				}
+
+				if ( 'Crontrol\\Pro\\Log->log_start()' === $callback['name'] ) {
+					continue;
+				}
+
+				if ( 'Crontrol\\Pro\\Log->log_end()' === $callback['name'] ) {
 					continue;
 				}
 
@@ -2548,6 +2739,70 @@ function interval( $since, bool $accurate = false ) {
 }
 
 /**
+ * Returns an HTML `<time>` element displaying a UTC timestamp in the site's timezone.
+ *
+ * The time is displayed in a friendly format relative to the current day where possible, for
+ * example "Today at 3:00 pm", "Tomorrow at 9:00 am", or "Yesterday at 11:00 pm". Other dates are
+ * shown in full, for example "January 1st at 12:00 pm". If the timezone offset of the given time
+ * differs from the site's current offset, for example due to daylight saving time, the offset is
+ * appended to the time.
+ *
+ * @param int $timestamp A Unix timestamp in UTC.
+ * @return string An HTML `<time>` element.
+ */
+function time_element( int $timestamp ): string {
+	$time_format = 'g:i a';
+
+	$datetime_utc = gmdate( 'Y-m-d H:i:s', $timestamp );
+
+	$timezone_local  = wp_timezone();
+	$date_local      = get_date_from_gmt( $datetime_utc, 'Y-m-d' );
+	$today_local     = ( new DateTimeImmutable( 'now', $timezone_local ) )->format( 'Y-m-d' );
+	$tomorrow_local  = ( new DateTimeImmutable( 'tomorrow', $timezone_local ) )->format( 'Y-m-d' );
+	$yesterday_local = ( new DateTimeImmutable( 'yesterday', $timezone_local ) )->format( 'Y-m-d' );
+
+	// If the offset of the date of the time is different from the offset of the site, add a marker.
+	if ( get_date_from_gmt( $datetime_utc, 'P' ) !== get_date_from_gmt( 'now', 'P' ) ) {
+		$time_format .= ' (P)';
+	}
+
+	$time_local = get_date_from_gmt( $datetime_utc, $time_format );
+
+	if ( $date_local === $today_local ) {
+		$date = sprintf(
+			/* translators: %s: Time */
+			__( 'Today at %s', 'wp-crontrol' ),
+			$time_local,
+		);
+	} elseif ( $date_local === $tomorrow_local ) {
+		$date = sprintf(
+			/* translators: %s: Time */
+			__( 'Tomorrow at %s', 'wp-crontrol' ),
+			$time_local,
+		);
+	} elseif ( $date_local === $yesterday_local ) {
+		$date = sprintf(
+			/* translators: %s: Time */
+			__( 'Yesterday at %s', 'wp-crontrol' ),
+			$time_local,
+		);
+	} else {
+		$date = sprintf(
+			/* translators: 1: Date, 2: Time */
+			__( '%1$s at %2$s', 'wp-crontrol' ),
+			get_date_from_gmt( $datetime_utc, 'F jS' ),
+			$time_local,
+		);
+	}
+
+	return sprintf(
+		'<time datetime="%1$s">%2$s</time>',
+		esc_attr( gmdate( 'c', $timestamp ) ),
+		esc_html( $date )
+	);
+}
+
+/**
  * Sets up the Events listing screen.
  *
  * @return void
@@ -2566,30 +2821,60 @@ function setup_manage_page() {
 function enqueue_assets( $hook_suffix ) {
 	$tab = get_tab_states();
 
-	if ( ! array_filter( $tab ) ) {
-		return;
+	$css_deps = [
+		'dashicons',
+	];
+	$js_deps = [];
+
+	$show_pointers = [
+		'logs' => ( $tab['events'] || ( $hook_suffix === 'plugins.php' ) ) && ! is_pointer_dismissed( 'wp-crontrol-logs' ),
+	];
+	$vars = array(
+		'pointers' => [],
+	);
+
+	if ( array_filter( $show_pointers ) ) {
+		$css_deps[] = 'wp-pointer';
+		$js_deps[] = 'wp-pointer';
 	}
 
-	wp_enqueue_style(
-		'wp-crontrol',
-		plugin_dir_url( PLUGIN_FILE ) . 'css/wp-crontrol.css',
-		array(
-			'dashicons',
-		),
-		WP_CRONTROL_VERSION
-	);
+	if ( $show_pointers['logs'] ) {
+		$vars['pointers']['logs'] = [
+			'title' => esc_js( __( 'Cron event logs', 'wp-crontrol' ) ),
+			'lines' => array(
+				esc_js( sprintf(
+					/* translators: 1: Name of the add-on plugin. */
+					__( 'Cron events can now be logged each time they run with WP Crontrol Pro. ', 'wp-crontrol' ),
+					'WP Crontrol Pro'
+				) ),
+				sprintf(
+					'<a href="%s">%s</a>',
+					'tools.php?page=wp-crontrol-logs',
+					esc_js( __( 'More information on the Cron Logs tab.', 'wp-crontrol' ) ),
+				),
+			),
+		];
+	}
+
+	if ( $hook_suffix !== 'plugins.php' ) {
+		wp_enqueue_style(
+			'wp-crontrol',
+			plugin_dir_url( PLUGIN_FILE ) . 'css/wp-crontrol.css',
+			$css_deps,
+			WP_CRONTROL_VERSION
+		);
+	}
+
 	wp_enqueue_script(
 		'wp-crontrol',
 		plugin_dir_url( PLUGIN_FILE ) . 'js/wp-crontrol.js',
-		array(),
+		$js_deps,
 		WP_CRONTROL_VERSION,
 		true
 	);
 
-	$vars = array(
-		'confirmDeleteEvent' => __( 'Are you sure you want to delete this event?', 'wp-crontrol' ),
-		'confirmDeleteHook' => __( 'Are you sure you want to delete all events with this hook?', 'wp-crontrol' ),
-	);
+	$vars['confirmDeleteEvent'] = __( 'Are you sure you want to delete this event?', 'wp-crontrol' );
+	$vars['confirmDeleteHook'] = __( 'Are you sure you want to delete all events with this hook?', 'wp-crontrol' );
 
 	if ( ! empty( $tab['add-event'] ) || ! empty( $tab['edit-event'] ) ) {
 		if ( current_user_can_edit_php_cron_events() ) {

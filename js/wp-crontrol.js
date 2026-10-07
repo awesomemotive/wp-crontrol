@@ -74,3 +74,29 @@ document.addEventListener( 'DOMContentLoaded', () => {
 		} );
 	} );
 } );
+
+window.wpCrontrol.pointers?.logs && window.jQuery && jQuery( document ).ready( function($) {
+	$('#crontrol_tab_logs,tr[data-slug="wp-crontrol"] .crontrol-logs')
+		.pointer( {
+			content:
+				'<h3>' + window.wpCrontrol.pointers.logs.title + '<\/h3>' +
+				window.wpCrontrol.pointers.logs.lines.map( function( line ) {
+					return '<p>' + line + '<\/p>';
+				} ).join( '' ),
+			position: {
+				edge: 'top',
+				align: 'left'
+			},
+			pointerWidth: 300,
+			close: () => {
+				$.post(
+					ajaxurl,
+					{
+						pointer: 'wp-crontrol-logs',
+						action: 'dismiss-wp-pointer',
+					}
+				);
+			},
+		} )
+		.pointer('open');
+} );
