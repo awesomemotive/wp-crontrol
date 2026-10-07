@@ -34,6 +34,15 @@ WP Crontrol was built by John Blackbourn, who also maintains these plugins for d
 * [Query Monitor](https://wordpress.org/plugins/query-monitor/) is the developer tools panel for WordPress.
 * [User Switching](https://wordpress.org/plugins/user-switching/) provides instant switching between user accounts in WordPress.
 
+## More Plugins From Our Team
+
+WP Crontrol is now looked after by the team at Awesome Motive. If it's useful to you, these might be too:
+
+* [WPVibe](https://wordpress.org/plugins/vibe-ai/) connects AI assistants like Claude and ChatGPT to your WordPress site, so they can build and manage it for you.
+* [Duplicator](https://wordpress.org/plugins/duplicator/) backs up, migrates, and clones WordPress sites, including scheduled backups.
+* [WP Mail SMTP](https://wordpress.org/plugins/wp-mail-smtp/) fixes WordPress email delivery, so the emails your scheduled tasks send actually arrive.
+* [WPCode](https://wordpress.org/plugins/insert-headers-and-footers/) adds custom code snippets to WordPress safely, without editing your theme's functions.php file.
+
 ## Privacy Statement
 
 WP Crontrol is private by default and always will be. It does not send data to any third party, nor does it include any third party resources. [WP Crontrol's full privacy statement can be found here](https://wp-crontrol.com/privacy/).
