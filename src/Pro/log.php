@@ -16,9 +16,9 @@ use Exception;
 class Log {
 
 	/**
-	 * Runs in progress, innermost last. A `null` entry marks a hook invocation that is not being logged.
+	 * Runs in progress, innermost last.
 	 *
-	 * @var array<int, LogRun|null>
+	 * @var array<int, LogRun>
 	 */
 	private array $stack = array();
 
@@ -75,11 +75,13 @@ class Log {
 
 		// The callbacks know which hook they belong to, rather than relying on current_filter(),
 		// which WordPress leaves wrong when an exception escapes a nested hook.
+		// Both callbacks are called from the same place for one invocation of the hook, so the
+		// depth of the PHP call stack identifies the invocation, even when the hook recurses.
 		$start = function ( ...$hook_args ) use ( $hook ): void {
-			$this->log_start( $hook, $hook_args );
+			$this->log_start( $hook, $hook_args, count( debug_backtrace( DEBUG_BACKTRACE_IGNORE_ARGS ) ) );
 		};
 		$end = function () use ( $hook ): void {
-			$this->log_end( $hook );
+			$this->log_end( $hook, count( debug_backtrace( DEBUG_BACKTRACE_IGNORE_ARGS ) ) );
 		};
 
 		add_action( $hook, $start, -9999, 99 );
@@ -206,7 +208,7 @@ class Log {
 	 */
 	private function current(): ?LogRun {
 		for ( $i = count( $this->stack ) - 1; $i >= 0; $i-- ) {
-			if ( $this->stack[ $i ] instanceof LogRun && ! $this->stack[ $i ]->ended ) {
+			if ( ! $this->stack[ $i ]->ended ) {
 				return $this->stack[ $i ];
 			}
 		}
@@ -471,7 +473,7 @@ class Log {
 		while ( $this->stack ) {
 			$state = array_pop( $this->stack );
 
-			if ( $state instanceof LogRun && ! $state->ended ) {
+			if ( ! $state->ended ) {
 				if ( $exception ) {
 					$state->caught_exception = $exception;
 				}
@@ -530,14 +532,18 @@ class Log {
 	 *
 	 * @param string  $hook      The hook name.
 	 * @param mixed[] $hook_args The arguments passed to the hook.
+	 * @param int     $depth     The depth of the call stack for this invocation.
 	 */
-	public function log_start( string $hook, array $hook_args = array() ): void {
+	public function log_start( string $hook, array $hook_args = array(), int $depth = 0 ): void {
 		global $wpdb;
 
 		if ( ! self::is_cron_context() ) {
-			$this->stack[] = null;
 			return;
 		}
+
+		// A run at this depth or deeper can't be a caller of this one, so it was left open by an
+		// exception that was caught further up.
+		$this->finish_abandoned( $depth - 1 );
 
 		/**
 		 * Filters whether the arguments of a cron event are stored in its log entry.
@@ -566,7 +572,6 @@ class Log {
 		try {
 			EventRunModel::create( $run );
 		} catch ( \RuntimeException $e ) {
-			$this->stack[] = null;
 			return;
 		}
 
@@ -581,6 +586,7 @@ class Log {
 		$state = new LogRun();
 		$state->run = $run;
 		$state->hook = $hook;
+		$state->depth = $depth;
 		$state->logger = new Logger();
 		$state->logger->init();
 		$state->start_queries = (int) $wpdb->num_queries;
@@ -602,44 +608,28 @@ class Log {
 	/**
 	 * Ends the logging for the current cron event.
 	 *
-	 * If a logged hook inside this one threw an exception that was caught before reaching this
-	 * point, its run never ended. Those runs are found above this one on the stack and are
-	 * recorded as having ended early.
-	 *
-	 * @param string $hook The hook name.
+	 * @param string $hook  The hook name.
+	 * @param int    $depth The depth of the call stack for this invocation.
 	 */
-	public function log_end( string $hook ): void {
+	public function log_end( string $hook, int $depth = 0 ): void {
 		$index = null;
 
 		for ( $i = count( $this->stack ) - 1; $i >= 0; $i-- ) {
-			$frame = $this->stack[ $i ];
-
-			if ( null === $frame || $frame->hook === $hook ) {
+			if ( $this->stack[ $i ]->hook === $hook && $this->stack[ $i ]->depth === $depth ) {
 				$index = $i;
 				break;
 			}
 		}
 
-		if ( null === $index ) {
-			return;
-		}
+		if ( null !== $index ) {
+			// Anything above this run was left open by an exception that was caught on the way back.
+			$this->finish_abandoned( $depth );
 
-		while ( count( $this->stack ) > $index + 1 ) {
-			$abandoned = array_pop( $this->stack );
+			$state = array_pop( $this->stack );
 
-			if ( $abandoned instanceof LogRun && ! $abandoned->ended ) {
-				$abandoned->run->errors[] = array(
-					'level'   => Logger::ERROR,
-					'message' => __( 'The run ended early because an exception was thrown and caught by the code that fired this hook.', 'wp-crontrol' ),
-				);
-				$this->finish( $abandoned, true );
+			if ( $state && ! $state->ended ) {
+				$this->finish( $state );
 			}
-		}
-
-		$state = array_pop( $this->stack );
-
-		if ( $state instanceof LogRun && ! $state->ended ) {
-			$this->finish( $state );
 		}
 
 		$outer = $this->current();
@@ -648,6 +638,32 @@ class Log {
 			$outer->logger->init();
 		} else {
 			$this->stop_listening();
+		}
+	}
+
+	/**
+	 * Finishes the runs deeper than the given depth, which ended early because an exception was
+	 * thrown in them and caught by the code that fired their hook.
+	 *
+	 * @param int $depth Runs deeper than this are finished.
+	 */
+	private function finish_abandoned( int $depth ): void {
+		while ( $this->stack && end( $this->stack )->depth > $depth ) {
+			$abandoned = array_pop( $this->stack );
+
+			if ( ! $abandoned->ended ) {
+				$abandoned->run->errors[] = array(
+					'level'   => Logger::ERROR,
+					'message' => __( 'The run ended early because an exception was thrown and caught by the code that fired this hook.', 'wp-crontrol' ),
+				);
+				$this->finish( $abandoned, true );
+			}
+
+			$outer = $this->current();
+
+			if ( $outer ) {
+				$outer->logger->init();
+			}
 		}
 	}
 
@@ -725,11 +741,26 @@ class Log {
 			$run->mark_completed();
 		}
 
+		$run->errors = self::bound_entries( $run->errors );
+		$run->logs = self::bound_entries( $run->logs );
+
 		try {
 			EventRunModel::update( $run );
 		} catch ( \RuntimeException $e ) {
-			// The run stays recorded as running; it will show as stalled after an hour.
-			return;
+			// Keep the outcome and counters even if the details can't be saved.
+			$run->logs = array();
+			$run->errors = array(
+				array(
+					'level'   => Logger::WARNING,
+					'message' => __( 'The details of this run could not be saved.', 'wp-crontrol' ),
+				),
+			);
+
+			try {
+				EventRunModel::update( $run );
+			} catch ( \RuntimeException $e ) {
+				return;
+			}
 		}
 	}
 
@@ -758,6 +789,50 @@ class Log {
 		}
 
 		return array( $keep );
+	}
+
+	/**
+	 * Keeps a list of log entries within what the database column can hold: long messages are
+	 * shortened, and entries past the limit are replaced with a note saying how many were left out.
+	 *
+	 * @param array<int, array{level: string, message: string}> $entries Log entries.
+	 * @return list<array{level: string, message: string}>
+	 */
+	public static function bound_entries( array $entries ): array {
+		$max_bytes = 48000;
+		$kept = array();
+		$size = 2;
+
+		foreach ( $entries as $i => $entry ) {
+			$message = (string) $entry['message'];
+
+			if ( strlen( $message ) > 1000 ) {
+				$message = substr( $message, 0, 1000 ) . ' [truncated]';
+			}
+
+			$item = array(
+				'level'   => (string) $entry['level'],
+				'message' => $message,
+			);
+			$item_size = strlen( (string) wp_json_encode( $item ) ) + 1;
+
+			if ( $size + $item_size > $max_bytes ) {
+				$kept[] = array(
+					'level'   => Logger::NOTICE,
+					'message' => sprintf(
+						/* translators: %s: Number of log entries */
+						__( '%s more entries were not saved.', 'wp-crontrol' ),
+						number_format_i18n( count( $entries ) - $i )
+					),
+				);
+				break;
+			}
+
+			$kept[] = $item;
+			$size += $item_size;
+		}
+
+		return $kept;
 	}
 
 	/**

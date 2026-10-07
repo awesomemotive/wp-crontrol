@@ -298,8 +298,10 @@ abstract class Model {
 		$success = false;
 
 		if ( $network_wide || ! is_multisite() ) {
-			// For network-wide clearing or single site, truncate the table
-			$success = self::truncate();
+			// DELETE rather than TRUNCATE, so IDs are never reused while a cron run still holds one.
+			$wpdb = self::wpdb();
+			$result = $wpdb->query( (string) $wpdb->prepare( 'DELETE FROM %i', self::get_table() ) );
+			$success = $result !== false;
 		} else {
 			// For multisite, delete only records from the current site
 			$wpdb = self::wpdb();

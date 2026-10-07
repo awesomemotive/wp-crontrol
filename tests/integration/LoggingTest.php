@@ -241,6 +241,86 @@ final class LoggingTest extends Test {
 		self::assertCount( 2, $this->runs( 'crontrol_test_catch_outer' ) );
 	}
 
+	public function testCaughtExceptionInRecursiveHookClosesTheRightRun(): void {
+		add_filter( 'crontrol/should_log', '__return_true' );
+		$this->observe( 'crontrol_test_recursive' );
+
+		$depth = 0;
+		add_action( 'crontrol_test_recursive', static function () use ( &$depth ): void {
+			$depth++;
+
+			if ( 1 === $depth ) {
+				try {
+					do_action( 'crontrol_test_recursive' );
+				} catch ( \RuntimeException $e ) {
+					// Caught by the code that fired the hook.
+				}
+				return;
+			}
+
+			throw new \RuntimeException( 'Inner failure' );
+		} );
+
+		do_action( 'crontrol_test_recursive' );
+
+		global $wp_current_filter;
+		$wp_current_filter = array_values( array_diff( $wp_current_filter, array( 'crontrol_test_recursive' ) ) );
+
+		$runs = $this->runs( 'crontrol_test_recursive' );
+		$statuses = array_map( static fn ( EventRun $run ): string => $run->status, $runs );
+		sort( $statuses );
+
+		self::assertSame( array( EventRun::STATUS_COMPLETED, EventRun::STATUS_ERRORED ), $statuses );
+		self::assertFalse( has_filter( 'wp_mail', array( Log::get_instance(), 'filter_wp_mail' ) ) );
+	}
+
+	public function testLogDetailsAreBounded(): void {
+		$entries = array();
+
+		for ( $i = 0; $i < 600; $i++ ) {
+			$entries[] = array(
+				'level'   => 'debug',
+				'message' => str_repeat( 'x', 2000 ),
+			);
+		}
+
+		$bounded = Log::bound_entries( $entries );
+		$last = end( $bounded );
+
+		self::assertLessThan( 50000, strlen( (string) wp_json_encode( $bounded ) ) );
+		self::assertIsArray( $last );
+		self::assertStringContainsString( 'more entries were not saved', $last['message'] );
+		self::assertStringEndsWith( '[truncated]', $bounded[0]['message'] );
+	}
+
+	public function testClearingLogsDoesNotReuseIDs(): void {
+		$first = EventRun::start( 'crontrol_test_ids', '', time(), array() );
+		EventRunModel::create( $first );
+
+		EventRunModel::clear_records();
+
+		$second = EventRun::start( 'crontrol_test_ids', '', time(), array() );
+		EventRunModel::create( $second );
+
+		self::assertGreaterThan( $first->ID, $second->ID );
+	}
+
+	public function testMissedHoursAreAggregatedLater(): void {
+		delete_site_option( 'crontrol_metrics_last_hour' );
+		delete_site_option( 'crontrol_metrics_last_day' );
+
+		$now = new \DateTimeImmutable( '2030-01-02 12:30:00', new \DateTimeZone( 'UTC' ) );
+		update_site_option( 'crontrol_metrics_last_hour', '2030-01-02 08:00:00' );
+
+		\Crontrol\Pro\aggregate_missing_metrics( $now );
+
+		self::assertSame( '2030-01-02 11:00:00', get_site_option( 'crontrol_metrics_last_hour' ) );
+		self::assertSame( '2030-01-01 00:00:00', get_site_option( 'crontrol_metrics_last_day' ) );
+
+		delete_site_option( 'crontrol_metrics_last_hour' );
+		delete_site_option( 'crontrol_metrics_last_day' );
+	}
+
 	public function testArgumentsDisplayIsEscaped(): void {
 		$html = \Crontrol\Event\get_hook_args_display(
 			\Crontrol\Event\URLCronEvent::HOOK_NAME,

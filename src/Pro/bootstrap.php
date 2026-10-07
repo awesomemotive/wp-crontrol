@@ -150,22 +150,64 @@ function maybe_schedule_jobs(): void {
 }
 
 function metrics(): void {
+	global $wpdb;
+
 	if ( ! tables_ready() ) {
 		return;
 	}
 
-	$now = new \DateTimeImmutable( 'now', new \DateTimeZone( 'UTC' ) );
+	// The job can run from more than one site in a network. A database lock stops two runs
+	// aggregating the same hour at the same time.
+	if ( '1' !== (string) $wpdb->get_var( "SELECT GET_LOCK('crontrol_metrics', 0)" ) ) {
+		return;
+	}
 
-	// Aggregate the hourly metrics for the hour that has just completed.
-	$completed_hour = $now->modify( '-1 hour' );
-	EventMetricModel::aggregate_errors_hourly( $completed_hour );
-	EventMetricModel::aggregate_warnings_hourly( $completed_hour );
-	EventMetricModel::aggregate_hook_duration_hourly( $completed_hour );
+	try {
+		aggregate_missing_metrics( new \DateTimeImmutable( 'now', new \DateTimeZone( 'UTC' ) ) );
+	} finally {
+		$wpdb->query( "SELECT RELEASE_LOCK('crontrol_metrics')" );
+	}
+}
 
-	// Aggregate the previous day during the first run after midnight UTC to avoid duplicates.
-	if ( (int) $now->format( 'G' ) === 0 ) {
-		$completed_day = $now->modify( '-1 day' );
-		EventMetricModel::aggregate_hook_duration_daily( $completed_day );
+/**
+ * Aggregates every completed hour and day since the last aggregation, so hours that cron
+ * missed are filled in later. At most two days of hours and a week of days per run.
+ *
+ * @param \DateTimeImmutable $now The current time in UTC.
+ */
+function aggregate_missing_metrics( \DateTimeImmutable $now ): void {
+	$current_hour = $now->setTime( (int) $now->format( 'G' ), 0, 0 );
+	$last_hour = get_site_option( 'crontrol_metrics_last_hour', '' );
+	$hour = is_string( $last_hour ) && '' !== $last_hour
+		? ( new \DateTimeImmutable( $last_hour, new \DateTimeZone( 'UTC' ) ) )->modify( '+1 hour' )
+		: $current_hour->modify( '-1 hour' );
+
+	if ( $hour < $current_hour->modify( '-48 hours' ) ) {
+		$hour = $current_hour->modify( '-48 hours' );
+	}
+
+	while ( $hour < $current_hour ) {
+		EventMetricModel::aggregate_errors_hourly( $hour );
+		EventMetricModel::aggregate_warnings_hourly( $hour );
+		EventMetricModel::aggregate_hook_duration_hourly( $hour );
+		update_site_option( 'crontrol_metrics_last_hour', $hour->format( 'Y-m-d H:i:s' ) );
+		$hour = $hour->modify( '+1 hour' );
+	}
+
+	$today = $now->setTime( 0, 0, 0 );
+	$last_day = get_site_option( 'crontrol_metrics_last_day', '' );
+	$day = is_string( $last_day ) && '' !== $last_day
+		? ( new \DateTimeImmutable( $last_day, new \DateTimeZone( 'UTC' ) ) )->modify( '+1 day' )
+		: $today->modify( '-1 day' );
+
+	if ( $day < $today->modify( '-7 days' ) ) {
+		$day = $today->modify( '-7 days' );
+	}
+
+	while ( $day < $today ) {
+		EventMetricModel::aggregate_hook_duration_daily( $day );
+		update_site_option( 'crontrol_metrics_last_day', $day->format( 'Y-m-d H:i:s' ) );
+		$day = $day->modify( '+1 day' );
 	}
 }
 

@@ -27,6 +27,11 @@ final class LogRun {
 	public string $hook = '';
 
 	/**
+	 * The depth of the call stack when the hook fired, which identifies this invocation.
+	 */
+	public int $depth = 0;
+
+	/**
 	 * Collects the messages logged during the run.
 	 */
 	public Logger $logger;

@@ -47,4 +47,7 @@ foreach ( array( 'crontrol_event_logs', 'crontrol_event_metrics' ) as $crontrol_
 	delete_site_transient( $crontrol_table . '_retry' );
 }
 
+delete_site_option( 'crontrol_metrics_last_hour' );
+delete_site_option( 'crontrol_metrics_last_day' );
+
 delete_metadata( 'user', 0, 'crontrol_dismissed_promos', '', true );
