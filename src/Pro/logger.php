@@ -345,7 +345,7 @@ class Logger {
 			$length = 0;
 
 			foreach ( $value as $key => $item ) {
-				$part = $key . ' => ' . ( is_array( $item ) ? sprintf( 'array(%d)', count( $item ) ) : self::describe( $item ) );
+				$part = self::shorten( (string) $key ) . ' => ' . ( is_array( $item ) ? sprintf( 'array(%d)', count( $item ) ) : self::describe( $item ) );
 				$length += strlen( $part );
 				$parts[] = $part;
 

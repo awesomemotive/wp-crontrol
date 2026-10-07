@@ -389,6 +389,7 @@ $text = str_repeat( 'w', 40 * 1024 * 1024 );
 $text[0] = "\n";
 $logger->info( $text );
 unset( $text );
+$logger->info( array( str_repeat( 'k', 40 * 1024 * 1024 ) => 1 ) );
 echo count( $logger->get_logs() );
 PHP;
 
@@ -397,7 +398,7 @@ PHP;
 		exec( escapeshellarg( PHP_BINARY ) . ' -d memory_limit=64M -r ' . escapeshellarg( $code ) . ' ' . escapeshellarg( $logger ) . ' 2>&1', $output, $status );
 
 		self::assertSame( 0, $status, implode( "\n", $output ) );
-		self::assertSame( '4', end( $output ) );
+		self::assertSame( '5', end( $output ) );
 	}
 
 	public function testFirstFailedMetricHourIsKeptForRetry(): void {
