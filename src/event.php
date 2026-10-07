@@ -510,7 +510,32 @@ function check_integrity( $value, $stored_hash ): bool {
  * @return string The HTML for the hook name label.
  */
 function get_hook_name_label( string $hook, array $args ): string {
-	return Event::create( $hook, 0, '', $args, null, null )->get_hook_name_label();
+	return Event::create( $hook, 0, '', normalize_logged_args( $hook, $args ), null, null )->get_hook_name_label();
+}
+
+/**
+ * PHP and URL cron events expect their first argument to be an array. Arguments stored in a log
+ * may not be, so anything else is dropped before the event is described.
+ *
+ * @param string  $hook The hook name.
+ * @param mixed[] $args The event arguments.
+ * @return mixed[]
+ */
+function normalize_logged_args( string $hook, array $args ): array {
+	if ( PHPCronEvent::HOOK_NAME !== $hook && URLCronEvent::HOOK_NAME !== $hook ) {
+		return $args;
+	}
+
+	if ( ! isset( $args[0] ) || ! is_array( $args[0] ) ) {
+		return array();
+	}
+
+	if ( URLCronEvent::HOOK_NAME === $hook ) {
+		$args[0]['url'] = isset( $args[0]['url'] ) && is_string( $args[0]['url'] ) ? $args[0]['url'] : '';
+		$args[0]['method'] = url_method( $args[0]['method'] ?? 'GET' );
+	}
+
+	return $args;
 }
 
 /**
@@ -521,6 +546,8 @@ function get_hook_name_label( string $hook, array $args ): string {
  * @return string|null The HTML for the arguments.
  */
 function get_hook_args_display( string $hook, array $args ): ?string {
+	$args = normalize_logged_args( $hook, $args );
+
 	if ( empty( $args ) ) {
 		return null;
 	}

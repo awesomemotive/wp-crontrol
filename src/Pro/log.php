@@ -692,7 +692,9 @@ class Log {
 		 */
 		$store_args = (bool) apply_filters( 'crontrol/log_event_args', false, $hook );
 
-		if ( $store_args ) {
+		$crontrol_event = in_array( $hook, array( \Crontrol\Event\PHPCronEvent::HOOK_NAME, \Crontrol\Event\URLCronEvent::HOOK_NAME ), true );
+
+		if ( $store_args && ! $crontrol_event ) {
 			// Each argument is stored as a short description, never in full, so large arguments
 			// can't use up memory or overflow the log.
 			$args = array_map( array( Logger::class, 'describe' ), array_slice( array_values( $hook_args ), 0, 10 ) );

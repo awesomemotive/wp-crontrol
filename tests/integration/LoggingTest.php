@@ -446,6 +446,29 @@ PHP;
 		self::assertCount( 2, $this->runs( 'crontrol_test_handler' ) );
 	}
 
+	public function testStoredSummariesOfURLEventArgumentsStillRender(): void {
+		$hook = \Crontrol\Event\URLCronEvent::HOOK_NAME;
+
+		self::assertNull( \Crontrol\Event\get_hook_args_display( $hook, array( 'array(4) { url => https://example.com }' ) ) );
+		self::assertIsString( \Crontrol\Event\get_hook_name_label( $hook, array( 'a summary string' ) ) );
+		self::assertSame( '<pre>GET https://example.com/[redacted]</pre>', \Crontrol\Event\get_hook_args_display( $hook, array( array( 'url' => 'https://example.com/[redacted]', 'name' => '' ) ) ) );
+	}
+
+	public function testRunNowNoticeSurvivesHookNamesWithSlashes(): void {
+		$messages = array(
+			\Crontrol\MESSAGE_EVENT_RUN_NOW => array( 'Scheduled the cron event %s to run now.', 'success' ),
+		);
+
+		foreach ( array( true, false ) as $logged ) {
+			Log::set_logging_for_hook( 'plugin/job', $logged );
+			$filtered = \Crontrol\Pro\filter_event_admin_messages( $messages, 'plugin/job', \Crontrol\MESSAGE_EVENT_RUN_NOW );
+			$output = sprintf( $filtered[ \Crontrol\MESSAGE_EVENT_RUN_NOW ][0], 'plugin/job' );
+
+			self::assertStringContainsString( 'Scheduled the cron event plugin/job to run now.', $output );
+			self::assertStringContainsString( 'crontrol_hook=plugin', $output . str_replace( 'crontrol_id=plugin', 'crontrol_hook=plugin', $output ) );
+		}
+	}
+
 	public function testFirstFailedMetricHourIsKeptForRetry(): void {
 		global $wpdb;
 

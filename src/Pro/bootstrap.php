@@ -843,11 +843,12 @@ function filter_event_admin_messages( array $messages, string $hook, int $messag
 			'crontrol_hook' => $hook,
 		], admin_url( 'tools.php' ) );
 
-		$messages[ \Crontrol\MESSAGE_EVENT_RUN_NOW ][0] .= sprintf(
+		// The message is passed through sprintf() again later, so percent signs in the URL are escaped.
+		$messages[ \Crontrol\MESSAGE_EVENT_RUN_NOW ][0] .= str_replace( '%', '%%', sprintf(
 			'<br><br><a href="%s">%s</a>',
 			esc_url( $url ),
 			esc_html__( 'View logs', 'wp-crontrol' ),
-		);
+		) );
 	} elseif ( ! in_array( $hook, INTERNAL_HOOKS, true ) ) {
 		// Logging is disabled, so offer to enable it for this hook.
 		$url = add_query_arg( [
@@ -857,12 +858,12 @@ function filter_event_admin_messages( array $messages, string $hook, int $messag
 		], admin_url( 'tools.php' ) );
 		$url = wp_nonce_url( $url, "crontrol-pro-toggle-logging_{$hook}" );
 
-		$messages[ \Crontrol\MESSAGE_EVENT_RUN_NOW ][0] .= sprintf(
+		$messages[ \Crontrol\MESSAGE_EVENT_RUN_NOW ][0] .= str_replace( '%', '%%', sprintf(
 			'<br><br>%s <a href="%s">%s</a>',
 			esc_html__( 'Logging is not enabled for this hook.', 'wp-crontrol' ),
 			esc_url( $url ),
 			esc_html__( 'Enable logging', 'wp-crontrol' ),
-		);
+		) );
 	}
 
 	return $messages;
