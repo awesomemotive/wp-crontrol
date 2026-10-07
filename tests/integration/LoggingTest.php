@@ -385,6 +385,10 @@ $logger = new Crontrol\Pro\Logger();
 $logger->info( 'Result: {0}', array_fill( 0, 50000, str_repeat( 'x', 2000 ) ) );
 $logger->error( new RuntimeException( str_repeat( 'y', 40 * 1024 * 1024 ) ) );
 $logger->assert( false, str_repeat( 'z', 30 * 1024 * 1024 ) );
+$text = str_repeat( 'w', 40 * 1024 * 1024 );
+$text[0] = "\n";
+$logger->info( $text );
+unset( $text );
 echo count( $logger->get_logs() );
 PHP;
 
@@ -393,7 +397,7 @@ PHP;
 		exec( escapeshellarg( PHP_BINARY ) . ' -d memory_limit=64M -r ' . escapeshellarg( $code ) . ' ' . escapeshellarg( $logger ) . ' 2>&1', $output, $status );
 
 		self::assertSame( 0, $status, implode( "\n", $output ) );
-		self::assertSame( '3', end( $output ) );
+		self::assertSame( '4', end( $output ) );
 	}
 
 	public function testFirstFailedMetricHourIsKeptForRetry(): void {

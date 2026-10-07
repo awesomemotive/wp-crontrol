@@ -834,7 +834,7 @@ class Log {
 				'message' => sprintf(
 					'%s: %s in %s:%d',
 					get_class( $state->caught_exception ),
-					$state->caught_exception->getMessage(),
+					substr( $state->caught_exception->getMessage(), 0, 1000 ),
 					basename( $state->caught_exception->getFile() ),
 					$state->caught_exception->getLine()
 				),

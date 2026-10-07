@@ -258,15 +258,17 @@ class Logger {
 			);
 		}
 
+		// Every part is shortened before anything else is done with it, so a large value can't use
+		// up memory on its way to being truncated.
 		if ( ! is_string( $message ) ) {
 			$message = self::describe( $message );
-		} elseif ( '' === trim( $message ) ) {
-			$message = '(Empty string)';
-		}
+		} else {
+			$message = self::shorten( $message );
 
-		// Every part is shortened before the message is put together, so a large value can't use
-		// up memory on its way to being truncated.
-		$message = self::shorten( $message );
+			if ( '' === trim( $message ) ) {
+				$message = '(Empty string)';
+			}
+		}
 
 		if ( null !== $prefix ) {
 			$prefix = self::shorten( $prefix );
