@@ -35,6 +35,11 @@ class Log {
 	private bool $shutdown_registered = false;
 
 	/**
+	 * Whether this plugin's exception handler is on PHP's handler stack.
+	 */
+	private bool $handler_installed = false;
+
+	/**
 	 * Whether the request-wide listeners are attached.
 	 */
 	private bool $listening = false;
@@ -321,15 +326,10 @@ class Log {
 			return $args;
 		}
 
-		$key = microtime( true ) . '|' . count( $current->https );
-
-		// Only a little metadata is kept per request. Responses are never held on to, so that
-		// logging doesn't add to the memory used by events that fetch large responses.
-		$current->https[ $key ] = array(
-			'method' => is_string( $args['method'] ?? null ) ? $args['method'] : 'GET',
-			'failed' => true,
-		);
-		$args['_crontrol_key'] = $key;
+		// Only counts are kept, never the requests or responses themselves, so logging doesn't add
+		// to the memory used by events that make many requests or fetch large responses.
+		$current->http_requests++;
+		$args['_crontrol_logged'] = true;
 
 		return $args;
 	}
@@ -364,15 +364,16 @@ class Log {
 		}
 
 		$current = $this->active();
-		$key     = $args['_crontrol_key'] ?? null;
 
-		if ( ! $current || ! is_string( $key ) || ! isset( $current->https[ $key ] ) ) {
+		if ( ! $current || empty( $args['_crontrol_logged'] ) ) {
 			return;
 		}
 
-		$current->https[ $key ]['failed'] = $this->is_http_failure( $response );
+		if ( ! $this->is_http_failure( $response ) ) {
+			$current->http_succeeded++;
+		}
 
-		$method = $current->https[ $key ]['method'];
+		$method = is_string( $args['method'] ?? null ) ? $args['method'] : 'GET';
 		$safe   = self::redact_url( $url );
 
 		if ( $this->is_http_failure( $response ) ) {
@@ -582,7 +583,13 @@ class Log {
 		}
 
 		$this->listening = true;
-		$this->old_exception_handler = set_exception_handler( array( $this, 'exception_handler' ) );
+
+		// The handler can still be on the stack from an earlier run, under one that an event added
+		// and didn't remove. It's only installed once.
+		if ( ! $this->handler_installed ) {
+			$this->old_exception_handler = set_exception_handler( array( $this, 'exception_handler' ) );
+			$this->handler_installed = true;
+		}
 
 		if ( ! $this->shutdown_registered ) {
 			register_shutdown_function( array( $this, 'shutdown_handler' ) );
@@ -641,8 +648,19 @@ class Log {
 
 		$this->routes = array();
 
-		set_exception_handler( $this->old_exception_handler );
-		$this->old_exception_handler = null;
+		// Take this plugin's handler back off PHP's handler stack. If code in the event put its own
+		// handler on top and left it there, leave the stack alone; this handler still passes
+		// exceptions on to the one it replaced.
+		if ( $this->handler_installed ) {
+			$top = set_exception_handler( null );
+			restore_exception_handler();
+
+			if ( array( $this, 'exception_handler' ) === $top ) {
+				restore_exception_handler();
+				$this->old_exception_handler = null;
+				$this->handler_installed = false;
+			}
+		}
 	}
 
 	/**
@@ -675,7 +693,9 @@ class Log {
 		$store_args = (bool) apply_filters( 'crontrol/log_event_args', false, $hook );
 
 		if ( $store_args ) {
-			$args = array_values( $hook_args );
+			// Each argument is stored as a short description, never in full, so large arguments
+			// can't use up memory or overflow the log.
+			$args = array_map( array( Logger::class, 'describe' ), array_slice( array_values( $hook_args ), 0, 10 ) );
 		} else {
 			$args = $this->get_identifying_args( $hook, $hook_args );
 		}
@@ -776,19 +796,15 @@ class Log {
 		$run = $state->run;
 
 		$run->db_queries = max( 0, (int) $wpdb->num_queries - $state->start_queries );
-		$run->https = count( $state->https );
+		$run->https = $state->http_requests;
 		$run->emails = $state->emails;
 
 		if ( function_exists( 'memory_get_peak_usage' ) ) {
 			$run->memory = memory_get_peak_usage( false );
 		}
 
-		$has_http_warning = false;
-		foreach ( $state->https as $http ) {
-			if ( $http['failed'] ) {
-				$has_http_warning = true;
-			}
-		}
+		// A request that failed, or never reported a response, counts as a warning.
+		$has_http_warning = $state->http_succeeded < $state->http_requests;
 
 		$has_warning = $errored || $state->logger->saw_warning();
 		$has_error = $has_warning;

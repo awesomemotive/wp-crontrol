@@ -322,7 +322,7 @@ class Logger {
 	 *
 	 * @param mixed $value The value.
 	 */
-	protected static function describe( $value ): string {
+	public static function describe( $value ): string {
 		if ( null === $value ) {
 			return 'null';
 		}

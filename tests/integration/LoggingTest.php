@@ -184,6 +184,8 @@ final class LoggingTest extends Test {
 
 		add_action( 'crontrol_test_http', static function (): void {
 			wp_remote_get( 'http://httpbin/status/500?token=very-secret' );
+			wp_remote_get( 'http://httpbin/status/200' );
+			wp_remote_get( 'http://httpbin/status/204' );
 		} );
 
 		do_action( 'crontrol_test_http' );
@@ -191,7 +193,7 @@ final class LoggingTest extends Test {
 		$runs = $this->runs( 'crontrol_test_http' );
 
 		self::assertCount( 1, $runs );
-		self::assertSame( 1, $runs[0]->https );
+		self::assertSame( 3, $runs[0]->https );
 		self::assertTrue( $runs[0]->warning );
 		self::assertStringNotContainsString( 'very-secret', (string) wp_json_encode( array( $runs[0]->errors, $runs[0]->logs ) ) );
 		self::assertStringNotContainsString( '/status/', (string) wp_json_encode( array( $runs[0]->errors, $runs[0]->logs ) ) );
@@ -399,6 +401,49 @@ PHP;
 
 		self::assertSame( 0, $status, implode( "\n", $output ) );
 		self::assertSame( '5', end( $output ) );
+	}
+
+	public function testStoredArgumentsAreSummarised(): void {
+		add_filter( 'crontrol/should_log', '__return_true' );
+		add_filter( 'crontrol/log_event_args', '__return_true' );
+		$this->observe( 'crontrol_test_args' );
+
+		do_action( 'crontrol_test_args', array_fill( 0, 100000, str_repeat( 'a', 1000 ) ), 'short' );
+
+		remove_all_filters( 'crontrol/log_event_args' );
+
+		$runs = $this->runs( 'crontrol_test_args' );
+
+		self::assertCount( 1, $runs );
+		self::assertCount( 2, $runs[0]->args );
+		self::assertIsString( $runs[0]->args[0] );
+		self::assertStringStartsWith( 'array(100000)', $runs[0]->args[0] );
+		self::assertLessThan( 1100, strlen( $runs[0]->args[0] ) );
+		self::assertSame( 'short', $runs[0]->args[1] );
+	}
+
+	public function testExceptionHandlerStackIsLeftAsItWas(): void {
+		add_filter( 'crontrol/should_log', '__return_true' );
+		$this->observe( 'crontrol_test_handler' );
+
+		$mine = static function ( \Throwable $e ): void {};
+		$before = set_exception_handler( $mine );
+
+		do_action( 'crontrol_test_handler' );
+		do_action( 'crontrol_test_handler' );
+
+		$top = set_exception_handler( null );
+		restore_exception_handler();
+
+		self::assertSame( $mine, $top );
+
+		restore_exception_handler();
+
+		$after = set_exception_handler( null );
+		restore_exception_handler();
+
+		self::assertSame( $before, $after );
+		self::assertCount( 2, $this->runs( 'crontrol_test_handler' ) );
 	}
 
 	public function testFirstFailedMetricHourIsKeptForRetry(): void {

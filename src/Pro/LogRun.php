@@ -45,12 +45,14 @@ final class LogRun {
 	public Logger $logger;
 
 	/**
-	 * HTTP requests made during the event run, keyed by an internal request key.
-	 * Only the method and whether the request failed are kept.
-	 *
-	 * @var array<string, array{method: string, failed: bool}>
+	 * Number of HTTP requests made during the run.
 	 */
-	public array $https = array();
+	public int $http_requests = 0;
+
+	/**
+	 * Number of those requests that returned a response with a status below 400.
+	 */
+	public int $http_succeeded = 0;
 
 	/**
 	 * Number of emails sent during the run.
