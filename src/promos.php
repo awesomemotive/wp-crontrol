@@ -191,7 +191,15 @@ jQuery( function ( $ ) {
 				if ( response.activateUrl ) {
 					$button.data( 'activate-url', response.activateUrl );
 				}
-				activate();
+				// wp.updates runs one request at a time and is still locked inside this callback.
+				var whenUnlocked = function () {
+					if ( wp.updates.ajaxLocked ) {
+						setTimeout( whenUnlocked, 100 );
+						return;
+					}
+					activate();
+				};
+				whenUnlocked();
 			},
 			error: function () {
 				$button.removeClass( 'updating-message' ).text( crontrolPromo.failed );
