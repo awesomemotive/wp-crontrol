@@ -237,12 +237,21 @@ function action_dismiss(): void {
 }
 
 /**
+ * Whether the new-home panel shows on the given tab for the current user.
+ *
+ * @param string $tab The current tab.
+ */
+function is_welcome_panel_visible( $tab ): bool {
+	return in_array( $tab, array( 'events', 'schedules', 'logs', 'insights' ), true ) && ! is_dismissed( 'welcome' );
+}
+
+/**
  * One panel at the top of the Cron Events and Cron Schedules screens.
  *
  * @param string $tab The current tab.
  */
 function show_welcome_panel( $tab ): void {
-	if ( ! in_array( $tab, array( 'events', 'schedules', 'logs', 'insights' ), true ) || is_dismissed( 'welcome' ) ) {
+	if ( ! is_welcome_panel_visible( $tab ) ) {
 		return;
 	}
 

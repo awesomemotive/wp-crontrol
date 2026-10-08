@@ -2766,7 +2766,8 @@ function enqueue_assets( $hook_suffix ) {
 	$js_deps = [];
 
 	$show_pointers = [
-		'logs' => $tab['events'] && ! is_pointer_dismissed( 'wp-crontrol-logs' ),
+		// The new-home panel already points people to logging, so the pointer waits until it's dismissed.
+		'logs' => $tab['events'] && ! is_pointer_dismissed( 'wp-crontrol-logs' ) && ! Promos\is_welcome_panel_visible( 'events' ),
 	];
 	$vars = array(
 		'pointers' => [],
