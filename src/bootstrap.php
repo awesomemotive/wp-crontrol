@@ -23,6 +23,7 @@ use IntlTimeZone;
 use ReflectionException;
 
 use function Crontrol\Event\check_integrity;
+use function Crontrol\Event\check_url_integrity;
 use function Crontrol\Event\validate_url;
 
 const TRANSIENT = 'crontrol-message-%d';
@@ -222,9 +223,9 @@ function action_handle_posts() {
 		$args = array(
 			array(
 				'url' => $cr->url,
-				'method' => $cr->method,
+				'method' => Event\url_method( $cr->method ),
 				'name' => $cr->eventname,
-				'hash' => wp_hash( $cr->url ),
+				'hash' => Event\url_hash( $cr->url ),
 			),
 		);
 
@@ -436,9 +437,9 @@ function action_handle_posts() {
 		$args = array(
 			array(
 				'url' => $cr->url,
-				'method' => $cr->method,
+				'method' => Event\url_method( $cr->method ),
 				'name' => $cr->eventname,
-				'hash' => wp_hash( $cr->url ),
+				'hash' => Event\url_hash( $cr->url ),
 			),
 		);
 		$hookname = ( ! empty( $cr->eventname ) ) ? $cr->eventname : __( 'URL Cron', 'wp-crontrol' );
@@ -654,13 +655,16 @@ function action_handle_posts() {
 
 		foreach ( $delete as $next_run_utc => $events ) {
 			foreach ( (array) $events as $hook => $sig ) {
+				// Decode first so the permission check sees the same hook name that gets deleted.
+				$hook = urldecode( (string) $hook );
+
 				// PHP cron events can be deleted even if they're disallowed, as long as the user has permission.
 				if ( PHPCronEvent::HOOK_NAME === $hook && ! current_user_can( 'edit_files' ) ) {
 					continue;
 				}
 
-				$event = Event\get_single( urldecode( $hook ), $sig, $next_run_utc );
-				$result = Event\delete( urldecode( $hook ), $sig, $next_run_utc );
+				$event = Event\get_single( $hook, $sig, $next_run_utc );
+				$result = Event\delete( $hook, $sig, $next_run_utc );
 
 				if ( ! is_wp_error( $result ) ) {
 					++$deleted;
@@ -924,6 +928,9 @@ function action_handle_posts() {
 		wp_safe_redirect( add_query_arg( $redirect, admin_url( 'tools.php' ) ) );
 		exit;
 	} elseif ( isset( $_POST['crontrol_action'] ) && 'export-event-csv' === $_POST['crontrol_action'] ) {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'You are not allowed to export cron events.', 'wp-crontrol' ), 403 );
+		}
 		check_admin_referer( 'crontrol-export-event-csv', 'crontrol_nonce' );
 
 		$type = isset( $_POST['crontrol_hooks_type'] ) ? wp_unslash( $_POST['crontrol_hooks_type'] ) : 'all';
@@ -2755,7 +2762,7 @@ function handle_url_cron_event( $url, $method, $hash ): void {
 	}
 
 	// Check the integrity of the URL.
-	if ( ! check_integrity( $url, $hash ) ) {
+	if ( ! check_url_integrity( $url, $hash ) ) {
 		throw new InvalidHashException(
 			sprintf(
 				'The stored hash for a URL cron event is not valid; for more information see %s',
@@ -2821,7 +2828,7 @@ function action_url_cron_event( array $args ): void {
 	}
 
 	$url = $args['url'] ?? null;
-	$method = $args['method'] ?? 'GET';
+	$method = Event\url_method( $args['method'] ?? 'GET' );
 	$hash = $args['hash'] ?? null;
 
 	try {

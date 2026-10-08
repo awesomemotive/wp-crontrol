@@ -1,9 +1,9 @@
 # WP Crontrol
 
-Contributors: johnbillion, scompt
+Contributors: johnbillion, scompt, smub, seedprod
 Tags: cron, wp-cron, crontrol, debug, woocommerce
 Tested up to: 7.1
-Stable tag: 1.21.2
+Stable tag: 1.22.0
 License: GPL v2 or later
 
 Take control of the cron events on your WordPress website or WooCommerce store with WP Crontrol.
@@ -53,10 +53,19 @@ Developers use WP Crontrol to streamline and debug their WordPress development p
 
 ### Other Plugins
 
-I maintain several other plugins for developers. Check them out:
+WP Crontrol was built by John Blackbourn, who also maintains these plugins for developers:
 
 * [Query Monitor](https://wordpress.org/plugins/query-monitor/) is the developer tools panel for WordPress.
 * [User Switching](https://wordpress.org/plugins/user-switching/) provides instant switching between user accounts in WordPress.
+
+### More Plugins From Our Team
+
+WP Crontrol is now looked after by the team at Awesome Motive. If it's useful to you, these might be too:
+
+* [WPVibe](https://wordpress.org/plugins/vibe-ai/) connects AI assistants like Claude and ChatGPT to your WordPress site, so they can build and manage it for you.
+* [Duplicator](https://wordpress.org/plugins/duplicator/) backs up, migrates, and clones WordPress sites, including scheduled backups.
+* [WP Mail SMTP](https://wordpress.org/plugins/wp-mail-smtp/) fixes WordPress email delivery, so the emails your scheduled tasks send actually arrive.
+* [WPCode](https://wordpress.org/plugins/insert-headers-and-footers/) adds custom code snippets to WordPress safely, without editing your theme's functions.php file.
 
 ### Privacy Statement
 
@@ -202,7 +211,7 @@ The cron commands which were previously included in WP Crontrol are now part of 
 
 ### How can I report a security bug?
 
-You can submit a private security vulnerability report to WP Crontrol via [the Security tab on the GitHub repo](https://github.com/johnbillion/wp-crontrol/security). The GitHub Security Advisory process facilitates private collaboration on security issues. You'll receive credit for a valid report and a CVE if necessary.
+You can submit a private security vulnerability report to WP Crontrol via [the Security tab on the GitHub repo](https://github.com/awesomemotive/wp-crontrol/security). The GitHub Security Advisory process facilitates private collaboration on security issues. You'll receive credit for a valid report and a CVE if necessary.
 
 Do not report security issues on the WordPress.org support forums or via email. Thank you.
 
@@ -215,3 +224,69 @@ The photo was taken by <a href="https://www.flickr.com/photos/michaelpardo/21453
 1. Cron events can be modified, deleted, and executed
 2. New cron events can be added
 3. New cron schedules can be added, giving plugin developers more options when scheduling events
+
+## Changelog ##
+
+### 1.22.0 (8 October 2026) ###
+
+* WP Crontrol is now maintained by the team at Awesome Motive. Thank you to John Blackbourn for building and looking after WP Crontrol for so many years. It remains free, open source, and private by default.
+* Fixes Run Now reporting a failure when the event was scheduled successfully, for example when a plugin such as Cavalcade stores events outside the cron option. Props @abdulraheemalick.
+* Security: Hardens several permission and integrity checks for cron events.
+* Removes the sponsor link.
+
+### 1.21.2 (29 August 2026) ###
+
+- Confirms full support for WordPress 7.1
+- Bumps the minimum supported version of WordPress to 6.6
+
+
+### 1.21.1 (31 July 2026) ###
+
+- Fixes some bulk delete behaviour
+- Confirms full support for WordPress 7.0
+
+### 1.21.0 (28 January 2026) ###
+
+* Adds support for invalid args in cron events by relaxing the strict typing and showing a warning on the listing and editing screens.
+
+### 1.20.0 (17 December 2025) ###
+
+* Confirms support for WordPress 6.9
+* Minor UI and UX improvements
+* Some architectural changes to prepare for future enhancements
+
+
+### 1.19.3 (23 October 2025) ###
+
+* Corrects the handling of closures as cron event actions.
+
+
+### 1.19.2 (19 August 2025) ###
+
+* Security: Hardens the "URL cron event" functionality by rejecting disallowed URLs. [More information see the security advisory](https://github.com/awesomemotive/wp-crontrol/security/advisories/GHSA-35c5-67fm-cpcp).
+* Tweaks the display of some non-persistent WordPress core hooks when Multisite is enabled.
+
+### 1.19.1 (3 June 2025) ###
+
+* Reinstates the ability to edit the Action Scheduler event.
+
+### 1.19.0 (23 April 2025) ###
+
+* Confirms support for WordPress 6.8
+* Further improvements to the display of dates, intervals, and timezones for increased clarity
+* Adds more contextual help links for problematic events
+* Various UI and UX improvements
+
+### 1.18.0 (13 January 2025) ###
+
+* Introduces support for a `CRONTROL_DISALLOW_PHP_EVENTS` constant to fully disable the PHP cron event functionality. [Full documentation here](https://wp-crontrol.com/docs/php-cron-events/).
+* Further improvements to how time durations and timezone information is displayed.
+
+### 1.17.1 (22 November 2024) ###
+
+* Confirms support for WordPress 6.7
+* Avoids some warnings when running on PHP 8.3 and 8.4
+
+### Earlier versions ###
+
+For the changelog of earlier versions, <a href="https://github.com/awesomemotive/wp-crontrol/releases">refer to the releases page on GitHub</a>.

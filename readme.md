@@ -1,7 +1,7 @@
 # WP Crontrol
 
 [![](https://img.shields.io/wordpress/plugin/installs/wp-crontrol?style=flat-square)](https://wordpress.org/plugins/wp-crontrol/)
-[![](https://img.shields.io/github/actions/workflow/status/johnbillion/wp-crontrol/acceptance-tests.yml?branch=develop&style=flat-square)](https://github.com/johnbillion/wp-crontrol/actions)
+[![](https://img.shields.io/github/actions/workflow/status/awesomemotive/wp-crontrol/acceptance-tests.yml?branch=develop&style=flat-square)](https://github.com/awesomemotive/wp-crontrol/actions)
 
 Take control of the scheduled cron events on your WordPress website or WooCommerce store with WP Crontrol. From the admin screens you can:
 
@@ -29,10 +29,19 @@ WP Crontrol is aware of timezones, will alert you to events that have no actions
 
 ## Other Plugins
 
-I maintain several other plugins for developers. Check them out:
+WP Crontrol was built by John Blackbourn, who also maintains these plugins for developers:
 
 * [Query Monitor](https://wordpress.org/plugins/query-monitor/) is the developer tools panel for WordPress.
 * [User Switching](https://wordpress.org/plugins/user-switching/) provides instant switching between user accounts in WordPress.
+
+## More Plugins From Our Team
+
+WP Crontrol is now looked after by the team at Awesome Motive. If it's useful to you, these might be too:
+
+* [WPVibe](https://wordpress.org/plugins/vibe-ai/) connects AI assistants like Claude and ChatGPT to your WordPress site, so they can build and manage it for you.
+* [Duplicator](https://wordpress.org/plugins/duplicator/) backs up, migrates, and clones WordPress sites, including scheduled backups.
+* [WP Mail SMTP](https://wordpress.org/plugins/wp-mail-smtp/) fixes WordPress email delivery, so the emails your scheduled tasks send actually arrive.
+* [WPCode](https://wordpress.org/plugins/insert-headers-and-footers/) adds custom code snippets to WordPress safely, without editing your theme's functions.php file.
 
 ## Privacy Statement
 

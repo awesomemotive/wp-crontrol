@@ -74,6 +74,7 @@ function run( $hookname, $sig ) {
  *
  * @param string  $hook Action hook to execute when the event is run.
  * @param mixed[] $args Optional. Array containing each separate argument to pass to the hook's callback function.
+ * @phpstan-param list<mixed> $args
  * @return true|WP_Error True if event successfully scheduled. WP_Error on failure.
  */
 function force_schedule_single_event( $hook, $args = array() ) {
@@ -94,8 +95,11 @@ function force_schedule_single_event( $hook, $args = array() ) {
 
 	$result = _set_cron_array( $crons );
 
+	// `_set_cron_array()` returns false when the `cron` option does not change. That also happens when the
+	// event is already scheduled, or when a plugin such as Cavalcade saves it outside the option, so only
+	// report a failure if the event does not exist.
 	// Not using the WP_Error from `_set_cron_array()` here so we can provide a more specific error message.
-	if ( false === $result ) {
+	if ( false === $result && ! wp_get_scheduled_event( $event->hook, $event->args, $event->timestamp ) ) {
 		return new WP_Error(
 			'could_not_add',
 			sprintf(
@@ -496,6 +500,52 @@ function check_integrity( $value, $stored_hash ): bool {
 
 	// If the hashes match then the integrity check is ok.
 	return hash_equals( $stored_hash, $value_hash );
+}
+
+/**
+ * Returns the integrity hash for a URL cron event's URL.
+ *
+ * URL hashes use their own key, derived from the auth salt, and a different algorithm from the
+ * hashes for PHP cron events. A hash created for a URL can therefore never pass the integrity
+ * check for a PHP cron event's code, whatever text is saved as the URL.
+ *
+ * @param string $url The URL.
+ * @return string The hash.
+ */
+function url_hash( $url ): string {
+	$key = hash_hmac( 'sha256', 'crontrol-url-event', wp_salt( 'auth' ) );
+
+	return hash_hmac( 'sha256', $url, $key );
+}
+
+/**
+ * Checks the integrity of a URL cron event's URL compared to its stored hash.
+ *
+ * URL cron events saved before 1.22.0 have an unprefixed hash. They're still accepted so that existing
+ * URL cron events keep running, and they get the prefixed hash when they're next saved.
+ *
+ * @param string|null $url         The URL.
+ * @param string|null $stored_hash The stored hash of the URL.
+ * @return bool
+ */
+function check_url_integrity( $url, $stored_hash ): bool {
+	if ( empty( $url ) || empty( $stored_hash ) ) {
+		return false;
+	}
+
+	return hash_equals( $stored_hash, url_hash( $url ) ) || check_integrity( $url, $stored_hash );
+}
+
+/**
+ * Returns the HTTP method for a URL cron event, limited to the methods the form offers.
+ *
+ * @param mixed $method The requested method.
+ * @return string One of GET, POST, HEAD, or DELETE.
+ */
+function url_method( $method ): string {
+	$method = is_string( $method ) ? strtoupper( $method ) : '';
+
+	return in_array( $method, array( 'GET', 'POST', 'HEAD', 'DELETE' ), true ) ? $method : 'GET';
 }
 
 /**
