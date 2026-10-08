@@ -17,32 +17,36 @@ add_action( 'admin_init', __NAMESPACE__ . '\action_dismiss' );
 /**
  * Returns the plugins we suggest, keyed by WordPress.org slug.
  *
- * @return array<string,array{name:string,text:string,active:bool}>
+ * @return array<string,array{name:string,file:string,text:string,active:bool}>
  */
 function get_plugins() {
 	/**
 	 * Filters the suggested plugins.
 	 *
-	 * @param array<string,array{name:string,text:string,active:bool}> $plugins Plugins keyed by WordPress.org slug.
+	 * @param array<string,array{name:string,file:string,text:string,active:bool}> $plugins Plugins keyed by WordPress.org slug.
 	 */
 	return apply_filters( 'crontrol/promos/plugins', array(
 		'vibe-ai'                    => array(
 			'name'   => 'WPVibe',
+			'file'   => 'vibe-ai/vibe-ai.php',
 			'text'   => __( 'Manage your site from Claude or ChatGPT. Ask your AI assistant which cron events are failing, run them, and fix the cause.', 'wp-crontrol' ),
 			'active' => defined( 'WPVIBE_VERSION' ),
 		),
 		'duplicator'                 => array(
 			'name'   => 'Duplicator',
+			'file'   => 'duplicator/duplicator.php',
 			'text'   => __( 'Back up, migrate, and clone your site. Scheduled backups run on cron, so you can keep an eye on them right here.', 'wp-crontrol' ),
 			'active' => defined( 'DUPLICATOR_VERSION' ) || defined( 'DUPLICATOR_PRO_VERSION' ),
 		),
 		'wp-mail-smtp'               => array(
 			'name'   => 'WP Mail SMTP',
+			'file'   => 'wp-mail-smtp/wp_mail_smtp.php',
 			'text'   => __( 'Make sure the emails your scheduled tasks send actually arrive, with reliable delivery through a real mail provider.', 'wp-crontrol' ),
 			'active' => function_exists( 'wp_mail_smtp' ),
 		),
 		'insert-headers-and-footers' => array(
 			'name'   => 'WPCode',
+			'file'   => 'insert-headers-and-footers/ihaf.php',
 			'text'   => __( 'Add PHP and other code snippets safely, without editing your theme’s functions.php file.', 'wp-crontrol' ),
 			'active' => function_exists( 'wpcode' ) || class_exists( 'WPCode' ),
 		),
@@ -69,27 +73,133 @@ function dismiss_url( $key ): string {
 }
 
 /**
- * Link that opens WordPress's own plugin details modal, or the WordPress.org page for users who can't install plugins.
+ * Button that installs and activates a plugin in place, using WordPress's own installer.
  *
- * @param string $slug WordPress.org plugin slug.
- * @param string $label Link text.
+ * Without JavaScript the button falls back to WordPress's standard install or activate screen.
+ * Users who can't install plugins get a link to the plugin's WordPress.org page instead.
+ *
+ * @param string                                         $slug   WordPress.org plugin slug.
+ * @param array{name:string,file:string,text:string,active:bool} $plugin The plugin.
+ * @param string                                         $classes Extra classes for the button.
  */
-function plugin_link( $slug, $label ): string {
-	if ( current_user_can( 'install_plugins' ) ) {
-		add_thickbox();
-		$url = self_admin_url( 'plugin-install.php?tab=plugin-information&plugin=' . rawurlencode( $slug ) . '&TB_iframe=true&width=772&height=600' );
+function plugin_button( $slug, array $plugin, $classes = 'button button-primary' ): string {
+	if ( ! function_exists( 'get_plugins' ) ) {
+		require_once ABSPATH . 'wp-admin/includes/plugin.php';
+	}
 
+	$installed = array_key_exists( $plugin['file'], \get_plugins() );
+
+	if ( $installed && current_user_can( 'activate_plugin', $plugin['file'] ) ) {
+		$action = 'activate';
+		$label  = __( 'Activate', 'wp-crontrol' );
+		$url    = wp_nonce_url( self_admin_url( 'plugins.php?action=activate&plugin=' . rawurlencode( $plugin['file'] ) ), 'activate-plugin_' . $plugin['file'] );
+	} elseif ( ! $installed && current_user_can( 'install_plugins' ) ) {
+		$action = 'install';
+		$label  = __( 'Install for free', 'wp-crontrol' );
+		$url    = wp_nonce_url( self_admin_url( 'update.php?action=install-plugin&plugin=' . rawurlencode( $slug ) ), 'install-plugin_' . $slug );
+	} else {
 		return sprintf(
-			'<a href="%1$s" class="thickbox open-plugin-details-modal button button-secondary">%2$s</a>',
-			esc_url( $url ),
-			esc_html( $label )
+			'<a href="%1$s" class="%2$s">%3$s</a>',
+			esc_url( 'https://wordpress.org/plugins/' . $slug . '/' ),
+			esc_attr( $classes ),
+			esc_html__( 'Learn more', 'wp-crontrol' )
 		);
 	}
 
+	enqueue_installer();
+
 	return sprintf(
-		'<a href="%1$s" class="button button-secondary">%2$s</a>',
-		esc_url( 'https://wordpress.org/plugins/' . $slug . '/' ),
+		'<a href="%1$s" class="crontrol-promo-install %2$s" data-action="%3$s" data-slug="%4$s" data-plugin="%5$s" data-name="%6$s">%7$s</a>',
+		esc_url( $url ),
+		esc_attr( $classes ),
+		esc_attr( $action ),
+		esc_attr( $slug ),
+		esc_attr( $plugin['file'] ),
+		esc_attr( $plugin['name'] ),
 		esc_html( $label )
+	);
+}
+
+/**
+ * Loads WordPress's plugin installer script and the small handler for the install buttons.
+ */
+function enqueue_installer(): void {
+	static $done = false;
+
+	if ( $done ) {
+		return;
+	}
+
+	$done = true;
+
+	wp_enqueue_script( 'updates' );
+	add_action( 'admin_footer', 'wp_print_request_filesystem_credentials_modal' );
+
+	$strings = array(
+		'installing' => __( 'Installing…', 'wp-crontrol' ),
+		'activating' => __( 'Activating…', 'wp-crontrol' ),
+		'active'     => __( 'Active', 'wp-crontrol' ),
+		'failed'     => __( 'Installation failed', 'wp-crontrol' ),
+	);
+
+	wp_add_inline_script(
+		'updates',
+		'window.crontrolPromo = ' . wp_json_encode( $strings ) . ';' . <<<'JS'
+jQuery( function ( $ ) {
+	$( document ).on( 'click', '.crontrol-promo-install', function ( event ) {
+		var $button = $( this );
+
+		if ( ! window.wp || ! wp.updates || ! wp.updates.activatePlugin ) {
+			return;
+		}
+
+		event.preventDefault();
+
+		if ( $button.hasClass( 'updating-message' ) || $button.hasClass( 'button-disabled' ) ) {
+			return;
+		}
+
+		var done = function () {
+			$button.removeClass( 'updating-message' ).addClass( 'button-disabled' ).attr( 'aria-disabled', 'true' ).text( crontrolPromo.active );
+		};
+
+		var activate = function () {
+			$button.text( crontrolPromo.activating );
+			wp.updates.activatePlugin( {
+				name: $button.data( 'name' ),
+				slug: $button.data( 'slug' ),
+				plugin: $button.data( 'plugin' ),
+				success: done,
+				error: function () {
+					// Fall back to the standard activation screen, which shows any error.
+					window.location.href = $button.data( 'activate-url' ) || $button.attr( 'href' );
+				}
+			} );
+		};
+
+		$button.addClass( 'updating-message' );
+
+		if ( 'activate' === $button.data( 'action' ) ) {
+			activate();
+			return;
+		}
+
+		$button.text( crontrolPromo.installing );
+		wp.updates.installPlugin( {
+			slug: $button.data( 'slug' ),
+			success: function ( response ) {
+				if ( response.activateUrl ) {
+					$button.data( 'activate-url', response.activateUrl );
+				}
+				activate();
+			},
+			error: function () {
+				$button.removeClass( 'updating-message' ).text( crontrolPromo.failed );
+			}
+		} );
+	} );
+} );
+JS
 	);
 }
 
@@ -177,7 +287,7 @@ function show_welcome_panel( $tab ): void {
 				<div class="crontrol-promo-card">
 					<strong><?php echo esc_html( $plugin['name'] ); ?></strong>
 					<p><?php echo esc_html( $plugin['text'] ); ?></p>
-					<?php echo plugin_link( $slug, __( 'Learn more', 'wp-crontrol' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+					<?php echo plugin_button( $slug, $plugin ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
 				</div>
 			<?php endforeach; ?>
 		</div>
@@ -196,17 +306,10 @@ function show_wpcode_tip(): void {
 		return;
 	}
 
-	$url = current_user_can( 'install_plugins' )
-		? self_admin_url( 'plugin-install.php?tab=plugin-information&plugin=insert-headers-and-footers&TB_iframe=true&width=772&height=600' )
-		: 'https://wordpress.org/plugins/insert-headers-and-footers/';
-
-	add_thickbox();
-
 	printf(
-		'<p class="description">%1$s <a href="%2$s" class="thickbox open-plugin-details-modal">%3$s</a> &middot; <a href="%4$s">%5$s</a></p>',
+		'<p class="description">%1$s %2$s &middot; <a href="%3$s">%4$s</a></p>',
 		esc_html__( 'Running PHP that isn’t tied to a schedule? WPCode keeps your snippets in one place and lets you switch them off safely.', 'wp-crontrol' ),
-		esc_url( $url ),
-		esc_html__( 'Learn about WPCode', 'wp-crontrol' ),
+		plugin_button( 'insert-headers-and-footers', $plugins['insert-headers-and-footers'], 'button button-small' ), // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 		esc_url( dismiss_url( 'wpcode' ) ),
 		esc_html__( 'Dismiss', 'wp-crontrol' )
 	);
