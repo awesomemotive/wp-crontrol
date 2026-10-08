@@ -20,7 +20,6 @@
 		"prepend-autoloader": false,
 		"classmap-authoritative": true,
 		"allow-plugins": {
-			"composer/installers": true,
 			"dealerdirect/phpcodesniffer-composer-installer": true,
 			"roots/wordpress-core-installer": true
 		}
@@ -35,8 +34,7 @@
 		"wp-coding-standards/wpcs": "3.4.1"
 	},
 	"require": {
-		"php": ">=7.4",
-		"composer/installers": "^1.0 || ^2.0"
+		"php": ">=7.4"
 	},
 	"autoload": {
 		"classmap": [
