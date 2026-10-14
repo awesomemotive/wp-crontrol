@@ -28,8 +28,14 @@ function crontrol_uninstall_pro_in_use(): bool {
 		return in_array( $pro, (array) get_option( 'active_plugins', array() ), true );
 	}
 
-	if ( array_key_exists( $pro, (array) get_site_option( 'active_sitewide_plugins', array() ) ) ) {
-		return true;
+	// Every network, not just this one: the tables are shared by all of them.
+	foreach ( get_networks( array(
+		'fields' => 'ids',
+		'number' => 0,
+	) ) as $network_id ) {
+		if ( array_key_exists( $pro, (array) get_network_option( (int) $network_id, 'active_sitewide_plugins', array() ) ) ) {
+			return true;
+		}
 	}
 
 	foreach ( get_sites( array(

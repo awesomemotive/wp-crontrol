@@ -54,6 +54,12 @@ if ( retired_pro_is_active() ) {
 	return;
 }
 
+// A WP Crontrol Pro that was already inactive keeps an uninstall hook that would clash with
+// WP Crontrol when it's deleted, from the admin or WP-CLI. The option is autoloaded, so this is cheap.
+if ( is_admin() || ( defined( 'WP_CLI' ) && WP_CLI ) ) {
+	forget_retired_pro_uninstall_hook();
+}
+
 add_action( 'admin_notices', __NAMESPACE__ . '\show_retired_pro_notice' );
 add_action( 'network_admin_notices', __NAMESPACE__ . '\show_retired_pro_notice' );
 
