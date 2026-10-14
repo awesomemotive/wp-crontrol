@@ -12,6 +12,13 @@ const DISMISSED_META = 'crontrol_dismissed_promos';
 
 add_action( 'crontrol/tab-header', __NAMESPACE__ . '\show_welcome_panel', 30 );
 add_action( 'admin_init', __NAMESPACE__ . '\action_dismiss' );
+add_action( 'wp_ajax_crontrol_record_referral', __NAMESPACE__ . '\ajax_record_referral' );
+
+/**
+ * Option that records, on this site only, which plugins were installed or activated from WP Crontrol.
+ * It's never sent anywhere.
+ */
+const REFERRED_OPTION = 'wp_crontrol_referred_plugins';
 
 /**
  * Returns the plugins we suggest, keyed by WordPress.org slug.
@@ -136,6 +143,8 @@ function enqueue_installer(): void {
 	add_action( 'admin_footer', 'wp_print_request_filesystem_credentials_modal' );
 
 	$strings = array(
+		'ajaxUrl'    => admin_url( 'admin-ajax.php' ),
+		'nonce'      => wp_create_nonce( 'crontrol-referral' ),
 		'installing' => __( 'Installing…', 'wp-crontrol' ),
 		'activating' => __( 'Activating…', 'wp-crontrol' ),
 		'active'     => __( 'Active', 'wp-crontrol' ),
@@ -162,6 +171,9 @@ jQuery( function ( $ ) {
 		}
 
 		var done = function () {
+			// Remembered on this site only, so the site owner can see what came from WP Crontrol.
+			$.post( crontrolPromo.ajaxUrl, { action: 'crontrol_record_referral', slug: $button.data( 'slug' ), _ajax_nonce: crontrolPromo.nonce } );
+
 			var setup = $button.data( 'setup' );
 			if ( setup ) {
 				// Point straight at the plugin's setup screen instead of a dead "Active" button.
@@ -330,4 +342,39 @@ function show_welcome_panel( $tab ): void {
 		<?php endif; ?>
 	</div>
 	<?php
+}
+
+/**
+ * Records that a plugin was installed or activated from a WP Crontrol button. Stored on this site only.
+ */
+function ajax_record_referral(): void {
+	check_ajax_referer( 'crontrol-referral' );
+
+	if ( ! current_user_can( 'activate_plugins' ) ) {
+		wp_send_json_error( null, 403 );
+	}
+
+	$slug = isset( $_POST['slug'] ) ? sanitize_key( wp_unslash( $_POST['slug'] ) ) : '';
+
+	if ( ! array_key_exists( $slug, get_plugins() ) ) {
+		wp_send_json_error( null, 400 );
+	}
+
+	record_referral( $slug );
+	wp_send_json_success();
+}
+
+/**
+ * Records the first time a plugin was installed or activated from WP Crontrol.
+ *
+ * @param string $slug WordPress.org plugin slug.
+ */
+function record_referral( string $slug ): void {
+	$referred = get_option( REFERRED_OPTION, array() );
+	$referred = is_array( $referred ) ? $referred : array();
+
+	if ( ! isset( $referred[ $slug ] ) ) {
+		$referred[ $slug ] = time();
+		update_option( REFERRED_OPTION, $referred, false );
+	}
 }

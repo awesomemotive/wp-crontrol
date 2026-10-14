@@ -68,9 +68,13 @@ if ( ! function_exists( 'crontrol_uninstall_site' ) ) {
 		delete_option( 'crontrol_log' );
 		delete_option( 'crontrol_log_all_hooks' );
 		delete_option( 'crontrol_retired_pro_notice' );
+		delete_option( 'crontrol_alerts' );
+		delete_option( 'crontrol_alerts_state' );
+		delete_option( 'wp_crontrol_referred_plugins' );
 
 		wp_clear_scheduled_hook( 'crontrol/metrics' );
 		wp_clear_scheduled_hook( 'crontrol/maintenance' );
+		wp_clear_scheduled_hook( 'crontrol/alerts_digest' );
 	}
 }
 

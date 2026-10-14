@@ -467,6 +467,25 @@ class Log {
 	}
 
 	/**
+	 * Counts emails that failed to send during the event run.
+	 *
+	 * @param mixed $error The error from wp_mail().
+	 */
+	public function action_wp_mail_failed( $error ): void {
+		$current = $this->active();
+
+		if ( ! $current ) {
+			return;
+		}
+
+		$current->mail_failed++;
+
+		if ( '' === $current->mail_error && $error instanceof \WP_Error ) {
+			$current->mail_error = substr( $error->get_error_message(), 0, 300 );
+		}
+	}
+
+	/**
 	 * Logs an Action Scheduler queue item that was processed during the event run.
 	 *
 	 * Action Scheduler runs its queue via a single cron event (`action_scheduler_run_queue`) which
@@ -625,6 +644,7 @@ class Log {
 		add_filter( 'http_request_args', array( $this, 'filter_http_request_args' ), 9999, 2 );
 		add_action( 'http_api_debug', array( $this, 'action_http_api_debug' ), 9999, 5 );
 		add_filter( 'wp_mail', array( $this, 'filter_wp_mail' ), 9999 );
+		add_action( 'wp_mail_failed', array( $this, 'action_wp_mail_failed' ), 9999 );
 		add_action( 'action_scheduler_after_execute', array( $this, 'action_scheduler_after_execute' ), 9999, 3 );
 		add_action( 'action_scheduler_failed_execution', array( $this, 'action_scheduler_failed_execution' ), 9999, 3 );
 
@@ -665,6 +685,7 @@ class Log {
 		remove_filter( 'http_request_args', array( $this, 'filter_http_request_args' ), 9999 );
 		remove_action( 'http_api_debug', array( $this, 'action_http_api_debug' ), 9999 );
 		remove_filter( 'wp_mail', array( $this, 'filter_wp_mail' ), 9999 );
+		remove_action( 'wp_mail_failed', array( $this, 'action_wp_mail_failed' ), 9999 );
 		remove_action( 'action_scheduler_after_execute', array( $this, 'action_scheduler_after_execute' ), 9999 );
 		remove_action( 'action_scheduler_failed_execution', array( $this, 'action_scheduler_failed_execution' ), 9999 );
 
@@ -826,6 +847,7 @@ class Log {
 		$run->db_queries = max( 0, (int) $wpdb->num_queries - $state->start_queries );
 		$run->https = $state->http_requests;
 		$run->emails = $state->emails;
+		$run->mail_failed = $state->mail_failed;
 
 		if ( function_exists( 'memory_get_peak_usage' ) ) {
 			$run->memory = memory_get_peak_usage( false );
@@ -866,6 +888,20 @@ class Log {
 
 		if ( $has_http_warning ) {
 			$has_warning = true;
+		}
+
+		// An email that failed to send is a warning, like a failed HTTP request.
+		if ( $state->mail_failed > 0 ) {
+			$has_warning = true;
+			$run->logs[] = array(
+				'level'   => Logger::WARNING,
+				'message' => sprintf(
+					/* translators: 1: Number of emails, 2: Error message */
+					_n( '%1$s email failed to send: %2$s', '%1$s emails failed to send: %2$s', $state->mail_failed, 'wp-crontrol' ),
+					number_format_i18n( $state->mail_failed ),
+					'' !== $state->mail_error ? $state->mail_error : __( 'no error message', 'wp-crontrol' )
+				),
+			);
 		}
 
 		$run->warning = $has_warning;
@@ -911,6 +947,15 @@ class Log {
 				return;
 			}
 		}
+
+		/**
+		 * Fires after a logged cron event run is finished and saved. Used by WP Crontrol's alerts.
+		 *
+		 * @internal
+		 *
+		 * @param EventRun $run The finished run.
+		 */
+		do_action( 'crontrol/run_finished', $run );
 	}
 
 	/**

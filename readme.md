@@ -7,6 +7,7 @@ Take control of the scheduled cron events on your WordPress website or WooCommer
 
  * View all scheduled cron events along with their arguments, schedule, callback functions, and when they are next due.
  * Edit, delete, pause, resume, and immediately run cron events.
+ * Log each run of the events you choose, get an email when a logged event fails, and let an AI assistant check and run events through the WordPress Abilities API.
  * Add new cron events.
  * Bulk delete cron events.
  * Add and remove custom cron schedules.

@@ -60,6 +60,16 @@ final class LogRun {
 	public int $emails = 0;
 
 	/**
+	 * Number of emails that failed to send during the run.
+	 */
+	public int $mail_failed = 0;
+
+	/**
+	 * The first email failure message, if any.
+	 */
+	public string $mail_error = '';
+
+	/**
 	 * Number of database queries when the run started.
 	 */
 	public int $start_queries = 0;

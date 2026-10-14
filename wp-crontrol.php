@@ -76,6 +76,9 @@ require_once __DIR__ . '/src/event.php';
 require_once __DIR__ . '/src/schedule.php';
 require_once __DIR__ . '/src/Pro/bootstrap.php';
 require_once __DIR__ . '/src/promos.php';
+require_once __DIR__ . '/src/alerts.php';
+require_once __DIR__ . '/src/abilities.php';
+require_once __DIR__ . '/src/ai.php';
 
 // Get this show on the road.
 init_hooks();

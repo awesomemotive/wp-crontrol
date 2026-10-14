@@ -405,7 +405,8 @@ final class Table extends \WP_List_Table {
 		}
 
 		if ( $event->is_errored() ) {
-			return '<span class="dashicons dashicons-no"></span>&nbsp;' . esc_html__( 'Errored', 'wp-crontrol' );
+			return '<span class="dashicons dashicons-no"></span>&nbsp;' . esc_html__( 'Errored', 'wp-crontrol' )
+				. '<br><a class="crontrol-ask-ai" href="' . esc_url( admin_url( 'tools.php?page=wp-crontrol-ai' ) ) . '">' . esc_html__( 'Ask your AI assistant why', 'wp-crontrol' ) . '</a>';
 		}
 
 		return '<span class="dashicons dashicons-clock crontrol-rotating"></span>&nbsp;' . esc_html__( 'Running', 'wp-crontrol' );
@@ -543,6 +544,10 @@ final class Table extends \WP_List_Table {
 		$metrics[] = array( __( 'HTTP API calls', 'wp-crontrol' ), number_format( $event->https ) );
 		$metrics[] = array( __( 'Emails sent', 'wp-crontrol' ), number_format( $event->emails ) );
 
+		if ( $event->mail_failed > 0 ) {
+			$metrics[] = array( __( 'Emails failed', 'wp-crontrol' ), number_format( $event->mail_failed ) );
+		}
+
 		if ( $event->memory > 0 ) {
 			$metrics[] = array( __( 'Peak memory', 'wp-crontrol' ), size_format( $event->memory ) );
 		}
@@ -556,7 +561,7 @@ final class Table extends \WP_List_Table {
 			);
 		}
 
-		$lists_html = '';
+		$lists_html = $this->run_details_notes( $event );
 		$lists_html .= $this->run_details_list(
 			__( 'Errors', 'wp-crontrol' ),
 			$event->errors,
@@ -591,6 +596,38 @@ final class Table extends \WP_List_Table {
 			$metrics_html, // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Built from escaped values above.
 			$lists_html // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Built from escaped values below.
 		);
+	}
+
+	/**
+	 * Builds the notes at the top of the run details: a failed email, and where to get help with a failure.
+	 *
+	 * @param EventRun $event The event run.
+	 */
+	private function run_details_notes( EventRun $event ): string {
+		$notes = '';
+
+		if ( $event->mail_failed > 0 ) {
+			$notes .= '<p><strong>' . esc_html( _n( 'An email from this run failed to send.', 'Emails from this run failed to send.', $event->mail_failed, 'wp-crontrol' ) ) . '</strong> ';
+
+			$smtp = \Crontrol\Promos\get_plugins()['wp-mail-smtp'];
+
+			if ( ! $smtp['active'] ) {
+				$notes .= esc_html__( 'Many hosts can’t send email reliably from WordPress. WP Mail SMTP sends it through a real mail provider instead.', 'wp-crontrol' )
+					. '</p><p>' . \Crontrol\Promos\plugin_button( 'wp-mail-smtp', $smtp );
+			}
+
+			$notes .= '</p>';
+		}
+
+		if ( $event->is_errored() ) {
+			$notes .= '<p>' . sprintf(
+				/* translators: %s: URL of the Cron AI screen */
+				wp_kses( __( 'Not sure why this failed? <a href="%s">Ask your AI assistant</a> to read this log and the code behind the event.', 'wp-crontrol' ), array( 'a' => array( 'href' => array() ) ) ),
+				esc_url( admin_url( 'tools.php?page=wp-crontrol-ai' ) )
+			) . '</p>';
+		}
+
+		return $notes ? '<div class="crontrol-run-dialog-notes">' . $notes . '</div>' : '';
 	}
 
 	/**
@@ -829,7 +866,20 @@ final class Table extends \WP_List_Table {
 			echo '<p>' . esc_html__( 'No matching cron event logs found.', 'wp-crontrol' ) . '</p>';
 		} else {
 			echo '<p>' . esc_html__( 'No cron event logs found yet.', 'wp-crontrol' ) . '</p>';
-			echo '<p>' . esc_html__( 'When cron events run, their execution logs will appear here.', 'wp-crontrol' ) . '</p>';
+			echo '<p>';
+			printf(
+				/* translators: %s: URL of the Cron Events screen */
+				wp_kses( __( 'Each run of a logged event appears here. Turn logging on for an event with its Enable logging link on the <a href="%s">Cron Events screen</a>, or in the settings below, then use Run now to see a first entry.', 'wp-crontrol' ), array( 'a' => array( 'href' => array() ) ) ),
+				esc_url( admin_url( 'tools.php?page=wp-crontrol' ) )
+			);
+			echo '</p>';
+			echo '<p>';
+			printf(
+				/* translators: %s: URL of the Cron AI screen */
+				wp_kses( __( 'An AI assistant can read these logs for you. <a href="%s">See Cron AI</a>.', 'wp-crontrol' ), array( 'a' => array( 'href' => array() ) ) ),
+				esc_url( admin_url( 'tools.php?page=wp-crontrol-ai' ) )
+			);
+			echo '</p>';
 		}
 	}
 

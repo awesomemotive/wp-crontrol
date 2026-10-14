@@ -1049,6 +1049,20 @@ function action_admin_menu() {
 		'wp-crontrol-logs',
 		'Crontrol\Pro\admin_logs_page'
 	);
+	$tabs[] = add_management_page(
+		esc_html__( 'Cron Alerts', 'wp-crontrol' ),
+		esc_html__( 'Cron Alerts', 'wp-crontrol' ),
+		'manage_options',
+		'wp-crontrol-alerts',
+		'Crontrol\Alerts\admin_alerts_page'
+	);
+	$tabs[] = add_management_page(
+		esc_html__( 'Cron AI', 'wp-crontrol' ),
+		esc_html__( 'Cron AI', 'wp-crontrol' ),
+		'manage_options',
+		'wp-crontrol-ai',
+		'Crontrol\Abilities\admin_ai_page'
+	);
 
 	foreach ( $tabs as $tab ) {
 		add_action( "load-{$tab}", __NAMESPACE__ . '\admin_help_tab' );
@@ -1067,6 +1081,8 @@ function get_top_level_menu_items(): array {
 		'tools.php?page=wp-crontrol'                => __( 'Cron Events', 'wp-crontrol' ),
 		'tools.php?page=wp-crontrol-logs'           => __( 'Cron Logs', 'wp-crontrol' ),
 		'tools.php?page=wp-crontrol-insights'       => __( 'Cron Insights', 'wp-crontrol' ),
+		'tools.php?page=wp-crontrol-alerts'         => __( 'Cron Alerts', 'wp-crontrol' ),
+		'tools.php?page=wp-crontrol-ai'             => __( 'Cron AI', 'wp-crontrol' ),
 		'options-general.php?page=wp-crontrol-schedules' => __( 'Cron Schedules', 'wp-crontrol' ),
 	);
 }
@@ -1117,6 +1133,8 @@ function action_top_level_menu(): void {
 
 	remove_submenu_page( 'tools.php', 'wp-crontrol-logs' );
 	remove_submenu_page( 'tools.php', 'wp-crontrol-insights' );
+	remove_submenu_page( 'tools.php', 'wp-crontrol-alerts' );
+	remove_submenu_page( 'tools.php', 'wp-crontrol-ai' );
 	remove_submenu_page( 'options-general.php', 'wp-crontrol-schedules' );
 }
 
@@ -2395,6 +2413,8 @@ function get_tab_states() {
 		'events'     => ( ! empty( $_GET['page'] ) && 'wp-crontrol' === $_GET['page'] && empty( $_GET['crontrol_action'] ) ),
 		'schedules'  => ( ! empty( $_GET['page'] ) && 'wp-crontrol-schedules' === $_GET['page'] ),
 		'logs'       => ( ! empty( $_GET['page'] ) && 'wp-crontrol-logs' === $_GET['page'] ),
+		'alerts'     => ( ! empty( $_GET['page'] ) && 'wp-crontrol-alerts' === $_GET['page'] ),
+		'ai'         => ( ! empty( $_GET['page'] ) && 'wp-crontrol-ai' === $_GET['page'] ),
 		'add-event'  => ( ! empty( $_GET['crontrol_action'] ) && 'new-cron' === $_GET['crontrol_action'] ),
 		'edit-event' => ( ! empty( $_GET['crontrol_action'] ) && 'edit-cron' === $_GET['crontrol_action'] ),
 	);
@@ -2503,6 +2523,16 @@ function do_tabs() {
 		'logs' => array(
 			'tools.php?page=wp-crontrol-logs',
 			__( 'Cron Logs', 'wp-crontrol' ),
+		),
+		'alerts'    => array(
+			'tools.php?page=wp-crontrol-alerts',
+			__( 'Cron Alerts', 'wp-crontrol' ),
+			true,
+		),
+		'ai'        => array(
+			'tools.php?page=wp-crontrol-ai',
+			__( 'Cron AI', 'wp-crontrol' ),
+			true,
 		),
 		'schedules' => array(
 			'options-general.php?page=wp-crontrol-schedules',

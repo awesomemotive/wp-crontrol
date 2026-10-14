@@ -6,7 +6,7 @@ namespace Crontrol\Pro;
  * @extends Model<EventRun>
  */
 final class EventRunModel extends Model {
-	protected const VERSION = 11;
+	protected const VERSION = 12;
 	protected const TABLE = 'crontrol_event_logs';
 
 	/**

@@ -104,6 +104,11 @@ final class EventRun implements Item {
 	public int $emails = 0;
 
 	/**
+	 * Count of emails that failed to send (WordPress fired `wp_mail_failed`).
+	 */
+	public int $mail_failed = 0;
+
+	/**
 	 * Memory usage in bytes.
 	 */
 	public int $memory = 0;

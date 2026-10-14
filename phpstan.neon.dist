@@ -27,3 +27,9 @@ parameters:
 	ignoreErrors:
 		-
 			message: '#^Call to function method_exists\(\) with ''\\\\QM_Util'' and ''populate_callback'' will always evaluate to true\.$#'
+		-
+			# The abilities tests skip themselves on WordPress versions without the Abilities API.
+			identifiers:
+				- WPCompat.functionNotAvailable
+				- WPCompat.methodNotAvailable
+			path: tests/integration/AbilitiesTest.php

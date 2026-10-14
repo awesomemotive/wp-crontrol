@@ -23,6 +23,7 @@ const MESSAGE_LOGGING_SETTINGS_SAVED = 6;
 const INTERNAL_HOOKS = array(
 	'crontrol/metrics',
 	'crontrol/maintenance',
+	'crontrol/alerts_digest',
 );
 
 /**

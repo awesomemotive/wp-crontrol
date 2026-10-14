@@ -322,3 +322,14 @@
 	color: #646970;
 	font-size: 12px;
 }
+
+.crontrol-run-dialog-notes {
+	background: #fcf9e8;
+	border-left: 4px solid #dba617;
+	margin: 12px 0;
+	padding: 2px 12px;
+}
+
+.crontrol-ask-ai {
+	font-size: 12px;
+}

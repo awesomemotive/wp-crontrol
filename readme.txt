@@ -14,6 +14,8 @@ Take control of the cron events on your WordPress website or WooCommerce store w
 
  * View all scheduled cron events along with their arguments, schedule, callback functions, and when they are next due.
 * Log each run of the events you choose, with its duration, errors, HTTP requests, and emails sent.
+* Get an email when a logged event fails.
+* Let an AI assistant check, run, and pause cron events and read their logs, through the WordPress Abilities API (WordPress 6.9 and later).
  * Edit, delete, pause, resume, and immediately run cron events.
  * Add new cron events.
  * Bulk delete cron events.
@@ -27,7 +29,9 @@ WP Crontrol is aware of timezones, will alert you to events that have no actions
 1. Go to the `Cron → Cron Events` menu to manage cron events. `Tools → Cron Events` still works too.
 2. Go to the `Cron → Cron Logs` menu to see what ran, once you turn on logging for an event.
 3. Go to the `Cron → Cron Insights` menu to see how your events behaved over the last week.
-4. Go to the `Cron → Cron Schedules` menu to manage cron schedules.
+4. Go to the `Cron → Cron Alerts` menu to get an email when a logged event fails.
+5. Go to the `Cron → Cron AI` menu to see what an AI assistant can do with your cron events.
+6. Go to the `Cron → Cron Schedules` menu to manage cron schedules.
 
 ### Documentation
 
@@ -73,6 +77,8 @@ WP Crontrol is now looked after by the Duplicator team. If it's useful to you, t
 ### Privacy Statement
 
 WP Crontrol is private by default and always will be. It does not send data to any third party, nor does it include any third party resources. [WP Crontrol's full privacy statement can be found here](https://wp-crontrol.com/privacy/).
+
+Cron alerts are sent by your site's own email setup, only to the addresses you choose. When you install or activate one of our other plugins from a WP Crontrol screen, WP Crontrol notes which one in your site's database, so you can see what came from WP Crontrol. That note stays on your site and is never sent anywhere.
 
 ### Accessibility Statement
 
@@ -241,7 +247,10 @@ The photo was taken by <a href="https://www.flickr.com/photos/michaelpardo/21453
 ### 2.0.0 (draft, not released) ###
 
 * Cron event logging and Cron Insights, previously part of WP Crontrol Pro, are now free for everyone. Logging is off until you turn it on for an event.
-* WP Crontrol now has its own Cron menu in the admin, with Events, Logs, Insights, and Schedules in one place. Tools > Cron Events still works.
+* WP Crontrol now has its own Cron menu in the admin, with Events, Logs, Insights, Alerts, AI, and Schedules in one place. Tools > Cron Events still works.
+* New: Cron Alerts. Get an email when a logged cron event fails, as it happens (at most once an hour for each event) or as a daily summary, with a test button to check that alerts arrive.
+* New: Cron AI. WP Crontrol registers its features with the WordPress Abilities API (WordPress 6.9 and later), so an AI assistant can list, run, and pause cron events, turn logging on, and read logs and insights, with your account's permissions. Assistants can't create or edit PHP or URL cron events.
+* Logs now show when an email sent by a logged event failed to send.
 * Dates and times in the event list can now be translated, including month names. Thanks to @zalemcitizen for the request.
 * Logs never store event arguments, and logged HTTP requests keep only the site address.
 * Logs are kept for 30 days, up to 10,000 entries per site. Deleting the plugin removes its log tables and settings.
