@@ -117,9 +117,25 @@ document.addEventListener( 'click', ( event ) => {
 	}
 
 	event.preventDefault();
-	promo.remove();
+	promo.hidden = true;
 
 	const url = new URL( link.href );
 	url.searchParams.set( 'crontrol_dismiss_background', '1' );
-	window.fetch( url.toString(), { credentials: 'same-origin' } );
+
+	window.fetch( url.toString(), { credentials: 'same-origin' } )
+		.then( ( response ) => ( response.ok ? response.json() : Promise.reject() ) )
+		.then( ( data ) => {
+			if ( ! data || ! data.success ) {
+				return Promise.reject();
+			}
+			promo.remove();
+		} )
+		.catch( () => {
+			// The dismissal wasn't saved, for example because the page has been open too long.
+			// Bring the suggestion back so it doesn't look dismissed when it isn't.
+			promo.hidden = false;
+			if ( window.wpCrontrol && window.wpCrontrol.dismissFailed ) {
+				link.textContent = window.wpCrontrol.dismissFailed;
+			}
+		} );
 } );

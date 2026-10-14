@@ -3000,6 +3000,7 @@ function enqueue_assets( $hook_suffix ) {
 
 	$vars['confirmDeleteEvent'] = __( 'Are you sure you want to delete this event?', 'wp-crontrol' );
 	$vars['confirmDeleteHook'] = __( 'Are you sure you want to delete all events with this hook?', 'wp-crontrol' );
+	$vars['dismissFailed'] = __( 'Could not dismiss this. Try again', 'wp-crontrol' );
 
 	if ( ! empty( $tab['add-event'] ) || ! empty( $tab['edit-event'] ) ) {
 		if ( current_user_can_edit_php_cron_events() ) {
