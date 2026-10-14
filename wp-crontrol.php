@@ -50,7 +50,7 @@ if ( ! version_compare( PHP_VERSION, '7.4', '>=' ) ) {
 require_once __DIR__ . '/src/retire-pro.php';
 
 if ( retired_pro_is_active() ) {
-	retire_pro();
+	retire_pro( plugin_basename( __FILE__ ) );
 	return;
 }
 

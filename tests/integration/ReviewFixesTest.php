@@ -114,4 +114,42 @@ final class ReviewFixesTest extends Test {
 	public function testRetiredProIsNotActiveByDefault(): void {
 		self::assertFalse( \Crontrol\retired_pro_is_active() );
 	}
+
+	/**
+	 * A network-wide WP Crontrol Pro stays while WP Crontrol is only active on one site.
+	 *
+	 * @group ms-required
+	 */
+	public function testNetworkProIsKeptWhenWPCrontrolIsSiteActive(): void {
+		update_site_option( 'active_sitewide_plugins', array( \Crontrol\RETIRED_PRO_PLUGIN => time() ) );
+
+		\Crontrol\retire_pro( 'wp-crontrol/wp-crontrol.php' );
+
+		self::assertArrayHasKey( \Crontrol\RETIRED_PRO_PLUGIN, get_site_option( 'active_sitewide_plugins' ) );
+		self::assertNotFalse( has_action( 'admin_notices', 'Crontrol\show_network_pro_notice' ) );
+
+		remove_action( 'admin_notices', 'Crontrol\show_network_pro_notice' );
+		delete_site_option( 'active_sitewide_plugins' );
+	}
+
+	/**
+	 * @group ms-required
+	 */
+	public function testNetworkProIsRetiredByNetworkWPCrontrol(): void {
+		update_site_option(
+			'active_sitewide_plugins',
+			array(
+				\Crontrol\RETIRED_PRO_PLUGIN => time(),
+				'wp-crontrol/wp-crontrol.php'  => time(),
+			)
+		);
+
+		\Crontrol\retire_pro( 'wp-crontrol/wp-crontrol.php' );
+
+		self::assertSame( array( 'wp-crontrol/wp-crontrol.php' ), array_keys( get_site_option( 'active_sitewide_plugins' ) ) );
+		self::assertSame( '1', (string) get_site_option( \Crontrol\RETIRED_PRO_NOTICE ) );
+
+		delete_site_option( 'active_sitewide_plugins' );
+		delete_site_option( \Crontrol\RETIRED_PRO_NOTICE );
+	}
 }

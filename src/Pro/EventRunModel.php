@@ -99,6 +99,28 @@ final class EventRunModel extends Model {
 	}
 
 	/**
+	 * Returns whether any run that started in the given period, on any site, is still running.
+	 *
+	 * Metrics wait for these runs to finish, so their result and duration are counted.
+	 *
+	 * @param \DateTimeImmutable $from Start of the period, in UTC.
+	 * @param \DateTimeImmutable $to   End of the period, in UTC, exclusive.
+	 */
+	public static function has_running( \DateTimeImmutable $from, \DateTimeImmutable $to ): bool {
+		$wpdb = self::wpdb();
+
+		return null !== $wpdb->get_var(
+			$wpdb->prepare(
+				'SELECT 1 FROM %i WHERE started_at >= %s AND started_at < %s AND status = %s LIMIT 1',
+				self::get_table(),
+				$from->format( 'Y-m-d H:i:s.v' ),
+				$to->format( 'Y-m-d H:i:s.v' ),
+				EventRun::STATUS_RUNNING
+			)
+		);
+	}
+
+	/**
 	 * Returns whether any logged run on the current site has an errored status.
 	 *
 	 * @return bool True if at least one run errored.

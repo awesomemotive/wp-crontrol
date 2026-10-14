@@ -112,7 +112,7 @@ final class LoggingFixesTest extends Test {
 	}
 
 	/**
-	 * A run that starts at 10:59 and finishes after 10:00 was aggregated is still counted.
+	 * A run that starts at 10:59 and finishes after 11:00 is counted: its hour waits for it.
 	 */
 	public function testLateFinishingRunsAreCounted(): void {
 		update_site_option( 'crontrol_metrics_last_hour', '2033-03-01 09:00:00' );
@@ -122,8 +122,8 @@ final class LoggingFixesTest extends Test {
 
 		\Crontrol\Pro\aggregate_missing_metrics( new \DateTimeImmutable( '2033-03-01 11:01:00', new \DateTimeZone( 'UTC' ) ) );
 
-		self::assertSame( '2033-03-01 10:00:00', get_site_option( 'crontrol_metrics_last_hour' ) );
-		self::assertSame( 0, $this->metric( EventMetric::TYPE_ERRORS_HOURLY, '2033-03-01 10:00:00' ) );
+		// 10:00 isn't aggregated while its run is still going.
+		self::assertSame( '2033-03-01 09:00:00', get_site_option( 'crontrol_metrics_last_hour' ) );
 
 		$run->status   = EventRun::STATUS_ERRORED;
 		$run->duration = 180000;
@@ -134,23 +134,43 @@ final class LoggingFixesTest extends Test {
 		self::assertSame( 1, $this->metric( EventMetric::TYPE_ERRORS_HOURLY, '2033-03-01 10:00:00' ) );
 		self::assertSame( '2033-03-01 11:00:00', get_site_option( 'crontrol_metrics_last_hour' ) );
 
-		// Recomputing again doesn't double count.
+		// Running again doesn't double count.
 		\Crontrol\Pro\aggregate_missing_metrics( new \DateTimeImmutable( '2033-03-01 12:35:00', new \DateTimeZone( 'UTC' ) ) );
 
 		self::assertSame( 1, $this->metric( EventMetric::TYPE_ERRORS_HOURLY, '2033-03-01 10:00:00' ) );
 	}
 
 	/**
-	 * The recompute window is bounded: hours older than it are left alone.
+	 * A run that never finishes holds an hour back for the grace period only.
 	 */
-	public function testOldHoursAreNotRecomputed(): void {
-		update_site_option( 'crontrol_metrics_last_hour', '2033-03-01 05:00:00' );
+	public function testStuckRunsDoNotHoldMetricsBackForever(): void {
+		update_site_option( 'crontrol_metrics_last_hour', '2033-03-01 04:00:00' );
 		update_site_option( 'crontrol_metrics_last_day', '2033-02-27 00:00:00' );
 
-		$this->add_run( '2033-03-01 05:30:00', EventRun::STATUS_ERRORED );
+		$this->add_run( '2033-03-01 05:30:00', EventRun::STATUS_RUNNING );
+		$this->add_run( '2033-03-01 05:40:00', EventRun::STATUS_ERRORED );
 
 		\Crontrol\Pro\aggregate_missing_metrics( new \DateTimeImmutable( '2033-03-01 12:05:00', new \DateTimeZone( 'UTC' ) ) );
 
-		self::assertSame( 0, $this->metric( EventMetric::TYPE_ERRORS_HOURLY, '2033-03-01 05:00:00' ) );
+		self::assertSame( 1, $this->metric( EventMetric::TYPE_ERRORS_HOURLY, '2033-03-01 05:00:00' ) );
+		self::assertSame( '2033-03-01 11:00:00', get_site_option( 'crontrol_metrics_last_hour' ) );
+	}
+
+	/**
+	 * Aggregated buckets are never deleted, so pruned logs don't erase their metrics.
+	 */
+	public function testAggregatedMetricsSurvivePruning(): void {
+		update_site_option( 'crontrol_metrics_last_hour', '2033-03-01 09:00:00' );
+		update_site_option( 'crontrol_metrics_last_day', '2033-02-27 00:00:00' );
+
+		$this->add_run( '2033-03-01 10:15:00', EventRun::STATUS_ERRORED );
+
+		\Crontrol\Pro\aggregate_missing_metrics( new \DateTimeImmutable( '2033-03-01 11:05:00', new \DateTimeZone( 'UTC' ) ) );
+		self::assertSame( 1, $this->metric( EventMetric::TYPE_ERRORS_HOURLY, '2033-03-01 10:00:00' ) );
+
+		EventRunModel::truncate();
+
+		\Crontrol\Pro\aggregate_missing_metrics( new \DateTimeImmutable( '2033-03-01 12:05:00', new \DateTimeZone( 'UTC' ) ) );
+		self::assertSame( 1, $this->metric( EventMetric::TYPE_ERRORS_HOURLY, '2033-03-01 10:00:00' ) );
 	}
 }

@@ -33,11 +33,20 @@ function retired_pro_is_active(): bool {
  * WP Crontrol doesn't load on this request. The old plugin's own copy of WP Crontrol runs instead,
  * as it did before, and WP Crontrol takes over from the next request. Logs and logging settings
  * use the same tables and options, so they carry over.
+ *
+ * @param string $plugin_file WP Crontrol's plugin file, relative to the plugins directory.
  */
-function retire_pro(): void {
+function retire_pro( string $plugin_file ): void {
 	require_once ABSPATH . 'wp-admin/includes/plugin.php';
 
 	$network = is_multisite() && is_plugin_active_for_network( RETIRED_PRO_PLUGIN );
+
+	// A network-wide WP Crontrol Pro is only replaced by a network-wide WP Crontrol. Otherwise the
+	// other sites would lose it, so it stays, and this site keeps running its copy of WP Crontrol.
+	if ( $network && ! is_plugin_active_for_network( $plugin_file ) ) {
+		add_action( 'admin_notices', __NAMESPACE__ . '\show_network_pro_notice' );
+		return;
+	}
 
 	deactivate_plugins( RETIRED_PRO_PLUGIN, true, $network );
 
@@ -101,5 +110,19 @@ function show_retired_pro_notice(): void {
 	printf(
 		'<div class="notice notice-info is-dismissible"><p>%s</p></div>',
 		esc_html__( 'WP Crontrol Pro’s features are now included in WP Crontrol, so WP Crontrol Pro has been deactivated. You can delete it. Your logs are kept.', 'wp-crontrol' )
+	);
+}
+
+/**
+ * Explains why WP Crontrol isn't running on a site where WP Crontrol Pro is active network-wide.
+ */
+function show_network_pro_notice(): void {
+	if ( ! current_user_can( 'activate_plugins' ) ) {
+		return;
+	}
+
+	printf(
+		'<div class="notice notice-warning"><p>%s</p></div>',
+		esc_html__( 'WP Crontrol Pro is active across the network, so this site is still using it. Its features are now included in WP Crontrol: network activate WP Crontrol to replace it on every site.', 'wp-crontrol' )
 	);
 }
