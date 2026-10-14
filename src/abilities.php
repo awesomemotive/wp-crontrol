@@ -441,6 +441,29 @@ function event_type( Event\Event $event ): string {
 }
 
 /**
+ * Returns a label for an event. For PHP and URL cron events it's built from the event's display
+ * name only, never from its code or URL, which can hold secrets.
+ *
+ * @param Event\Event $event The event.
+ * @param string      $type  The event type.
+ */
+function event_label( Event\Event $event, string $type ): string {
+	$name = (string) ( $event->args[0]['name'] ?? '' );
+
+	if ( 'php' === $type ) {
+		/* translators: %s: Name of the PHP cron event */
+		return '' !== $name ? sprintf( __( 'PHP cron event (%s)', 'wp-crontrol' ), $name ) : __( 'PHP cron event', 'wp-crontrol' );
+	}
+
+	if ( 'url' === $type ) {
+		/* translators: %s: Name of the URL cron event */
+		return '' !== $name ? sprintf( __( 'URL cron event (%s)', 'wp-crontrol' ), $name ) : __( 'URL cron event', 'wp-crontrol' );
+	}
+
+	return $event->hook;
+}
+
+/**
  * Converts an event into ability output. PHP code, full URLs, and integrity hashes are never included.
  *
  * @param Event\Event $event The event.
@@ -459,7 +482,7 @@ function format_event( Event\Event $event ): array {
 		'hook'          => $event->hook,
 		'sig'           => $event->sig,
 		'type'          => $type,
-		'label'         => wp_strip_all_tags( html_entity_decode( $event->get_hook_name_label(), ENT_QUOTES ) ),
+		'label'         => event_label( $event, $type ),
 		'next_run_utc'  => gmdate( 'c', $event->timestamp ),
 		'next_run_site' => wp_date( 'c', $event->timestamp ),
 		'schedule'      => $event->schedule ? $event->get_schedule_name() : null,

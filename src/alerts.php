@@ -77,6 +77,43 @@ function save_state( array $state ): void {
 }
 
 /**
+ * Runs a change to the alert state while holding a database lock, so overlapping cron requests
+ * can't both pass the throttle or overwrite each other's changes. The state is read fresh from the
+ * database inside the lock.
+ *
+ * If the lock can't be had within two seconds, the change is skipped: for alerts it's better to
+ * miss one email than to send a burst.
+ *
+ * @param callable $change Receives the current state and returns the new state, or null to leave it.
+ * @return bool Whether the change ran.
+ */
+function with_state_lock( callable $change ): bool {
+	global $wpdb;
+
+	// Lock names are server-wide, so the name includes this install's database, prefix, and site.
+	$lock = 'crontrol_alerts_' . md5( DB_NAME . '|' . $wpdb->prefix );
+
+	if ( '1' !== (string) $wpdb->get_var( $wpdb->prepare( 'SELECT GET_LOCK(%s, 2)', $lock ) ) ) {
+		return false;
+	}
+
+	try {
+		wp_cache_delete( STATE_OPTION, 'options' );
+		wp_cache_delete( 'notoptions', 'options' );
+
+		$state = $change( get_state() );
+
+		if ( is_array( $state ) ) {
+			save_state( $state );
+		}
+	} finally {
+		$wpdb->query( $wpdb->prepare( 'SELECT RELEASE_LOCK(%s)', $lock ) );
+	}
+
+	return true;
+}
+
+/**
  * Returns the valid recipient addresses, up to ten. Falls back to the site's admin email.
  *
  * @return list<string>
@@ -146,44 +183,61 @@ function on_run_finished( EventRun $run ): void {
 		return;
 	}
 
-	$state = get_state();
+	$failure = describe_run( $run );
 
 	if ( 'digest' === $settings['mode'] ) {
-		if ( count( $state['digest'] ) < DIGEST_LIMIT ) {
-			$state['digest'][] = describe_run( $run );
-			save_state( $state );
+		with_state_lock(
+			static function ( array $state ) use ( $failure ) {
+				if ( count( $state['digest'] ) >= DIGEST_LIMIT ) {
+					return null;
+				}
+
+				$state['digest'][] = $failure;
+				return $state;
+			}
+		);
+		return;
+	}
+
+	$now      = time();
+	$reserved = false;
+
+	// The limits are checked and reserved together, under the lock.
+	with_state_lock(
+		static function ( array $state ) use ( $run, $now, &$reserved ) {
+			// One email per hook per hour.
+			if ( isset( $state['sent'][ $run->hook ] ) && ( $now - (int) $state['sent'][ $run->hook ] ) < HOOK_THROTTLE ) {
+				return null;
+			}
+
+			// And a ceiling for the whole site, in case many events fail at once.
+			if ( ( $now - $state['window_start'] ) >= HOUR_IN_SECONDS ) {
+				$state['window_start'] = $now;
+				$state['window_count'] = 0;
+			}
+
+			if ( $state['window_count'] >= SITE_LIMIT ) {
+				return null;
+			}
+
+			// Throttle on queueing, so the limits hold even if the email can't be sent.
+			$state['sent'][ $run->hook ] = $now;
+			++$state['window_count'];
+
+			// Forget hooks that haven't alerted for a day, so the state stays small.
+			$state['sent'] = array_filter(
+				$state['sent'],
+				static fn ( $time ): bool => ( $now - (int) $time ) < DAY_IN_SECONDS
+			);
+
+			$reserved = true;
+			return $state;
 		}
-		return;
-	}
-
-	$now = time();
-
-	// One email per hook per hour.
-	if ( isset( $state['sent'][ $run->hook ] ) && ( $now - (int) $state['sent'][ $run->hook ] ) < HOOK_THROTTLE ) {
-		return;
-	}
-
-	// And a ceiling for the whole site, in case many events fail at once.
-	if ( ( $now - $state['window_start'] ) >= HOUR_IN_SECONDS ) {
-		$state['window_start'] = $now;
-		$state['window_count'] = 0;
-	}
-
-	if ( $state['window_count'] >= SITE_LIMIT ) {
-		return;
-	}
-
-	// Throttle on queueing, so the limits hold even if the email can't be sent.
-	$state['sent'][ $run->hook ] = $now;
-	++$state['window_count'];
-
-	// Forget hooks that haven't alerted for a day, so the state stays small.
-	$state['sent'] = array_filter(
-		$state['sent'],
-		static fn ( $time ): bool => ( $now - (int) $time ) < DAY_IN_SECONDS
 	);
 
-	save_state( $state );
+	if ( ! $reserved ) {
+		return;
+	}
 
 	$queue = &queue();
 
@@ -192,7 +246,7 @@ function on_run_finished( EventRun $run ): void {
 		register_shutdown_function( __NAMESPACE__ . '\flush_queue' );
 	}
 
-	$queue[] = describe_run( $run );
+	$queue[] = $failure;
 }
 
 /**
@@ -222,17 +276,25 @@ function flush_queue(): void {
  */
 function send_digest(): void {
 	$settings = get_alert_settings();
-	$state    = get_state();
 
-	if ( ! $settings['enabled'] || 'digest' !== $settings['mode'] || ! $state['digest'] ) {
+	if ( ! $settings['enabled'] || 'digest' !== $settings['mode'] ) {
 		return;
 	}
 
-	$failures        = $state['digest'];
-	$state['digest'] = array();
-	save_state( $state );
+	$failures = array();
 
-	send_failures( $failures, true );
+	// Take the collected failures and empty the digest in one step.
+	with_state_lock(
+		static function ( array $state ) use ( &$failures ) {
+			$failures        = $state['digest'];
+			$state['digest'] = array();
+			return $state;
+		}
+	);
+
+	if ( $failures ) {
+		send_failures( $failures, true );
+	}
 }
 
 /**
@@ -336,14 +398,19 @@ function send( string $subject, string $body, bool $test ): bool {
 		$sending = false;
 	}
 
-	$state = get_state();
-	$state['last_result'] = array(
+	$result = array(
 		'time'  => time(),
 		'sent'  => (bool) $sent,
 		'error' => $sent ? '' : ( '' !== $error ? $error : __( 'WordPress could not send the email.', 'wp-crontrol' ) ),
 		'test'  => $test,
 	);
-	save_state( $state );
+
+	with_state_lock(
+		static function ( array $state ) use ( $result ) {
+			$state['last_result'] = $result;
+			return $state;
+		}
+	);
 
 	return (bool) $sent;
 }

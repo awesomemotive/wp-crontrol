@@ -387,7 +387,8 @@ abstract class Model {
 
 		dbDelta( static::get_db_delta() );
 
-		if ( ! static::table_exists() ) {
+		// dbDelta() doesn't report a failed ALTER, so check every column is really there.
+		if ( ! static::table_exists() || ! static::columns_exist() ) {
 			set_site_transient( $retry_key, 1, HOUR_IN_SECONDS );
 			return false;
 		}
@@ -412,6 +413,16 @@ abstract class Model {
 		$table = self::get_table();
 
 		return $table === $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $wpdb->esc_like( $table ) ) );
+	}
+
+	/**
+	 * Whether the table has a column for every field.
+	 */
+	final public static function columns_exist(): bool {
+		$wpdb = self::wpdb();
+		$columns = $wpdb->get_col( $wpdb->prepare( 'SHOW COLUMNS FROM %i', self::get_table() ) );
+
+		return ! array_diff( array_keys( self::get_field_definitions() ), (array) $columns );
 	}
 
 	/**

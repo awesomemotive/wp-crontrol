@@ -139,6 +139,63 @@ final class AbilitiesTest extends Test {
 		self::assertSame( 'Ability test', $result['events'][0]['name'] );
 	}
 
+	/**
+	 * Unnamed PHP and URL events must not leak their code or full URL through the label.
+	 */
+	public function testUnnamedEventsLeakNoCodeOrURLs(): void {
+		$this->admin();
+
+		$code = '$secret_token = "abc123"; error_log( $secret_token );';
+		wp_schedule_single_event(
+			time() + HOUR_IN_SECONDS,
+			PHPCronEvent::HOOK_NAME,
+			array(
+				array(
+					'code' => $code,
+					'name' => '',
+					'hash' => wp_hash( $code ),
+				),
+			)
+		);
+
+		$url = 'https://example.com/hook?key=supersecretkey';
+		wp_schedule_single_event(
+			time() + HOUR_IN_SECONDS,
+			URLCronEvent::HOOK_NAME,
+			array(
+				array(
+					'url'    => $url,
+					'method' => 'GET',
+					'name'   => '',
+					'hash'   => \Crontrol\Event\url_hash( $url ),
+				),
+			)
+		);
+
+		$list = $this->ability( 'wp-crontrol/list-events' )->execute( array( 'search' => 'crontrol_' ) );
+		self::assertIsArray( $list );
+		$encoded = (string) wp_json_encode( $list );
+
+		self::assertStringNotContainsString( 'secret_token', $encoded );
+		self::assertStringNotContainsString( 'abc123', $encoded );
+		self::assertStringNotContainsString( 'supersecretkey', $encoded );
+		self::assertStringNotContainsString( '/hook', $encoded );
+
+		foreach ( $list['events'] as $event ) {
+			$single = $this->ability( 'wp-crontrol/get-event' )->execute(
+				array(
+					'hook' => $event['hook'],
+					'sig'  => $event['sig'],
+				)
+			);
+			$encoded = (string) wp_json_encode( $single );
+			self::assertStringNotContainsString( 'abc123', $encoded );
+			self::assertStringNotContainsString( 'supersecretkey', $encoded );
+		}
+
+		wp_clear_scheduled_hook( URLCronEvent::HOOK_NAME );
+	}
+
 	public function testRunningPHPEventsNeedsEditFiles(): void {
 		$this->admin();
 		$sig = $this->php_event();

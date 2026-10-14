@@ -205,6 +205,32 @@ final class AlertsTest extends Test {
 		self::assertCount( 1, EventRunModel::query()->per_page( 10 )->get() );
 	}
 
+	/**
+	 * While another request holds the alert lock, a failure must not slip past the throttle.
+	 */
+	public function testAlertsAreSkippedWhileAnotherRequestHoldsTheLock(): void {
+		global $wpdb;
+
+		$this->settings( array( 'enabled' => true ) );
+
+		$other = new \wpdb( DB_USER, DB_PASSWORD, DB_NAME, DB_HOST );
+		$lock  = 'crontrol_alerts_' . md5( DB_NAME . '|' . $wpdb->prefix );
+		self::assertSame( '1', (string) $other->get_var( $other->prepare( 'SELECT GET_LOCK(%s, 0)', $lock ) ) );
+
+		try {
+			Alerts\on_run_finished( $this->failed_run( 'crontrol_alert_locked' ) );
+		} finally {
+			$other->query( (string) $other->prepare( 'SELECT RELEASE_LOCK(%s)', $lock ) );
+			$other->close();
+		}
+
+		self::assertSame( array(), Alerts\queue() );
+
+		// Once the lock is free, the same failure goes through.
+		Alerts\on_run_finished( $this->failed_run( 'crontrol_alert_locked' ) );
+		self::assertCount( 1, Alerts\queue() );
+	}
+
 	public function testReferralsAreRecordedOnceAndLocally(): void {
 		\Crontrol\Promos\record_referral( 'wp-mail-smtp' );
 		$first = get_option( \Crontrol\Promos\REFERRED_OPTION );
