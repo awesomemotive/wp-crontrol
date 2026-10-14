@@ -8,12 +8,14 @@ use function Crontrol\time_element;
  * @covers \Crontrol\time_element
  */
 class TimeElementTest extends Test {
+	#[\Override]
 	public function setUp(): void {
 		parent::setUp();
 		update_option( 'timezone_string', 'UTC' );
 		update_option( 'gmt_offset', 0 );
 	}
 
+	#[\Override]
 	public function tearDown(): void {
 		remove_all_filters( 'gettext_with_context' );
 		$GLOBALS['wp_locale']->init();
