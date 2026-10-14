@@ -166,7 +166,7 @@ function &queue(): array {
  */
 function describe_run( EventRun $run ): array {
 	return array(
-		'site_id' => get_current_blog_id(),
+		'site_id' => $run->site_id,
 		'id'      => $run->ID,
 		'hook'    => $run->hook,
 		'time'    => $run->started_at->getTimestamp(),
@@ -187,6 +187,29 @@ function on_run_finished( EventRun $run ): void {
 		return;
 	}
 
+	// An event can finish in another site's context, for example if it switched sites and threw.
+	// Its alert belongs to the site it started on: that site's settings, throttle, and recipients.
+	$switched = is_multisite() && $run->site_id > 0 && get_current_blog_id() !== $run->site_id;
+
+	if ( $switched ) {
+		switch_to_blog( $run->site_id );
+	}
+
+	try {
+		queue_failure( $run );
+	} finally {
+		if ( $switched ) {
+			restore_current_blog();
+		}
+	}
+}
+
+/**
+ * Queues an alert for a failed run, or adds it to the digest, in the current site's context.
+ *
+ * @param EventRun $run The failed run.
+ */
+function queue_failure( EventRun $run ): void {
 	$settings = get_alert_settings();
 
 	if ( ! $settings['enabled'] ) {

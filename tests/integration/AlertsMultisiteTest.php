@@ -21,6 +21,44 @@ final class AlertsMultisiteTest extends Test {
 		parent::tear_down();
 	}
 
+	public function testARunThatFinishesOnAnotherSiteAlertsItsOwnSite(): void {
+		$site_two = self::factory()->blog->create();
+		self::assertIsInt( $site_two );
+
+		update_option( Alerts\SETTINGS_OPTION, array( 'enabled' => true, 'recipients' => 'one@example.com' ), false );
+		$run           = EventRun::start( 'crontrol_alert_site_one', '', time(), array() );
+		$run->status   = EventRun::STATUS_ERRORED;
+		$run->errors[] = array(
+			'level'   => 'error',
+			'message' => 'Site one broke',
+		);
+
+		switch_to_blog( $site_two );
+		update_option( Alerts\SETTINGS_OPTION, array( 'enabled' => true, 'recipients' => 'two@example.com' ), false );
+
+		// The run started on site one but finishes while site two is current.
+		Alerts\on_run_finished( $run );
+		$site_two_state = Alerts\get_state();
+		restore_current_blog();
+
+		self::assertSame( array(), $site_two_state['sent'] );
+
+		$sent = array();
+		add_filter(
+			'pre_wp_mail',
+			static function ( $pre, array $atts ) use ( &$sent ) {
+				$sent[] = (array) $atts['to'];
+				return true;
+			},
+			10,
+			2
+		);
+
+		Alerts\flush_queue();
+
+		self::assertSame( array( array( 'one@example.com' ) ), $sent );
+	}
+
 	public function testAlertsGoToTheSiteTheEventFailedOn(): void {
 		$site_two = self::factory()->blog->create();
 		self::assertIsInt( $site_two );
