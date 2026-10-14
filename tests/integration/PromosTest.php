@@ -284,9 +284,10 @@ final class PromosTest extends Test {
 	public function testInstalledKeyComesFromTheSitesPlugins(): void {
 		remove_filter( 'crontrol/promos/plugins', array( $this, 'filter_plugins' ) );
 
+		$installed = get_plugins();
+
 		foreach ( Promos\get_plugins() as $slug => $plugin ) {
-			self::assertArrayHasKey( 'installed', $plugin, $slug );
-			self::assertIsBool( $plugin['installed'] );
+			self::assertSame( array_key_exists( $plugin['file'], $installed ), $plugin['installed'], $slug );
 		}
 	}
 }
