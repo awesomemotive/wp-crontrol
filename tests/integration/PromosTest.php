@@ -264,6 +264,23 @@ final class PromosTest extends Test {
 		self::assertSame( '', $this->render( 'Crontrol\Promos\show_wpcode_tip' ) );
 	}
 
+	public function testDismissalReportsWhetherItWasSaved(): void {
+		$this->admin();
+
+		self::assertTrue( Promos\save_dismissal( 'welcome' ) );
+		self::assertTrue( Promos\save_dismissal( 'welcome' ), 'Already dismissed counts as saved.' );
+
+		// A write that fails is reported, so the suggestion isn't hidden as though it was dismissed.
+		add_filter( 'update_user_metadata', '__return_false' );
+		add_filter( 'add_user_metadata', '__return_false' );
+		self::assertFalse( Promos\save_dismissal( 'wpcode-tip' ) );
+		remove_filter( 'update_user_metadata', '__return_false' );
+		remove_filter( 'add_user_metadata', '__return_false' );
+
+		self::assertFalse( Promos\is_dismissed( 'wpcode-tip' ) );
+		self::assertTrue( Promos\is_dismissed( 'welcome' ) );
+	}
+
 	public function testInstalledKeyComesFromTheSitesPlugins(): void {
 		remove_filter( 'crontrol/promos/plugins', array( $this, 'filter_plugins' ) );
 

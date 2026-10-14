@@ -185,7 +185,7 @@ input[type="time"][step="1"] {
 .crontrol-promo-grid {
 	display: grid;
 	gap: 12px;
-	grid-template-columns: repeat( auto-fit, minmax( 200px, 1fr ) );
+	grid-template-columns: repeat( auto-fit, minmax( 170px, 1fr ) );
 }
 
 .crontrol-promo-card {

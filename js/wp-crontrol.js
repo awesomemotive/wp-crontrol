@@ -117,12 +117,23 @@ document.addEventListener( 'click', ( event ) => {
 	}
 
 	event.preventDefault();
-	promo.hidden = true;
+
+	if ( link.getAttribute( 'aria-disabled' ) ) {
+		return;
+	}
+
+	// The suggestion stays until the server confirms the dismissal is saved.
+	const label = link.textContent;
+	link.setAttribute( 'aria-disabled', 'true' );
+	link.style.opacity = '0.5';
 
 	const url = new URL( link.href );
 	url.searchParams.set( 'crontrol_dismiss_background', '1' );
 
-	window.fetch( url.toString(), { credentials: 'same-origin' } )
+	const controller = window.AbortController ? new AbortController() : null;
+	const timeout = controller ? setTimeout( () => controller.abort(), 15000 ) : null;
+
+	window.fetch( url.toString(), { credentials: 'same-origin', signal: controller ? controller.signal : undefined } )
 		.then( ( response ) => ( response.ok ? response.json() : Promise.reject() ) )
 		.then( ( data ) => {
 			if ( ! data || ! data.success ) {
@@ -131,11 +142,12 @@ document.addEventListener( 'click', ( event ) => {
 			promo.remove();
 		} )
 		.catch( () => {
-			// The dismissal wasn't saved, for example because the page has been open too long.
-			// Bring the suggestion back so it doesn't look dismissed when it isn't.
-			promo.hidden = false;
-			if ( window.wpCrontrol && window.wpCrontrol.dismissFailed ) {
-				link.textContent = window.wpCrontrol.dismissFailed;
-			}
+			// Not saved, for example because the page has been open too long. Say so, and allow another try.
+			link.removeAttribute( 'aria-disabled' );
+			link.style.opacity = '';
+			link.textContent = ( window.wpCrontrol && window.wpCrontrol.dismissFailed ) || label;
+		} )
+		.finally( () => {
+			clearTimeout( timeout );
 		} );
 } );

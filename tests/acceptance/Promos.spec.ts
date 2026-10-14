@@ -55,4 +55,31 @@ test.describe( 'Suggestions from the WP Crontrol team', () => {
 		await page.reload();
 		await expect( panel ).toBeVisible();
 	} );
+
+	test( 'The panel stays until the dismissal is saved', {
+		annotation: {
+			type: 'user-story',
+			description: 'As an administrator, I need a dismissal to only look done once it is saved'
+		}
+	}, async ( {
+		page,
+	} ) => {
+		const panel = page.locator( '[data-crontrol-promo="welcome"]' );
+		let release: () => void = () => {};
+		const held = new Promise<void>( ( resolve ) => {
+			release = resolve;
+		} );
+
+		await page.route( /crontrol_dismiss_background/, async ( route ) => {
+			await held;
+			await route.continue();
+		} );
+
+		await page.goto( '/wp-admin/tools.php?page=wp-crontrol' );
+		await panel.getByRole( 'link', { name: 'Dismiss' } ).click();
+		await expect( panel ).toBeVisible();
+
+		release();
+		await expect( panel ).toHaveCount( 0 );
+	} );
 } );

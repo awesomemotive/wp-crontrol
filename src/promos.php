@@ -339,6 +339,24 @@ JS
 }
 
 /**
+ * Saves a dismissal for the current user. Returns whether it's stored, including when it already was.
+ *
+ * @param string $key Promo key.
+ */
+function save_dismissal( string $key ): bool {
+	if ( is_dismissed( $key ) ) {
+		return true;
+	}
+
+	$dismissed   = get_user_meta( get_current_user_id(), DISMISSED_META, true );
+	$dismissed   = is_array( $dismissed ) ? $dismissed : array();
+	$dismissed[] = $key;
+	update_user_meta( get_current_user_id(), DISMISSED_META, array_values( array_unique( $dismissed ) ) );
+
+	return is_dismissed( $key );
+}
+
+/**
  * Handles the dismiss links.
  */
 function action_dismiss(): void {
@@ -354,13 +372,14 @@ function action_dismiss(): void {
 
 	check_admin_referer( 'crontrol-dismiss-promo-' . $key );
 
-	$dismissed   = get_user_meta( get_current_user_id(), DISMISSED_META, true );
-	$dismissed   = is_array( $dismissed ) ? $dismissed : array();
-	$dismissed[] = $key;
-	update_user_meta( get_current_user_id(), DISMISSED_META, array_values( array_unique( $dismissed ) ) );
+	$saved = save_dismissal( $key );
 
-	// The Dismiss links hide their suggestion in place and tell the server in the background.
+	// The Dismiss links hide their suggestion in place once the server confirms it's saved.
 	if ( isset( $_GET['crontrol_dismiss_background'] ) ) {
+		if ( ! $saved ) {
+			wp_send_json_error( null, 500 );
+		}
+
 		wp_send_json_success();
 	}
 
