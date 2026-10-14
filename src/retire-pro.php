@@ -1,6 +1,6 @@
 <?php
 /**
- * Retires the WP Crontrol Pro plugin, whose features are part of WP Crontrol from 1.23.0.
+ * Retires the WP Crontrol Pro plugin, whose features are part of WP Crontrol from 2.0.0.
  *
  * The old plugin bundles its own copy of WP Crontrol and declares the same functions and classes,
  * so the two can't run together. This file has no dependencies so it can run before anything else

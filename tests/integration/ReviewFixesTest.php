@@ -5,7 +5,7 @@ namespace Crontrol\Tests;
 use Crontrol\Pro\Log;
 
 /**
- * Regression tests for the fixes from the 1.23 security review.
+ * Regression tests for the fixes from the 2.0 security review.
  */
 final class ReviewFixesTest extends Test {
 	#[\Override]

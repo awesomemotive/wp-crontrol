@@ -11,7 +11,7 @@ use Crontrol\Pro\EventRunModel;
 use Crontrol\Pro\Log;
 
 /**
- * Regression tests for the logging fixes from the 1.23 review.
+ * Regression tests for the logging fixes from the 2.0 review.
  */
 final class LoggingFixesTest extends Test {
 	#[\Override]
