@@ -46,12 +46,54 @@ final class EventMetricModel extends Model {
 	}
 
 	/**
+	 * Decides whether to aggregate a metric bucket.
+	 *
+	 * A bucket that's already aggregated is skipped, unless it's being recomputed, in which case
+	 * its rows are deleted first so runs that finished after the first aggregation are counted.
+	 * The caller holds the metrics lock, so two requests don't recompute the same bucket at once.
+	 *
+	 * @param string            $metric_type The metric type.
+	 * @phpstan-param EventMetric::TYPE_* $metric_type
+	 * @param DateTimeImmutable $bucket      The start of the bucket.
+	 * @param bool              $replace     Whether to recompute the bucket if it's already aggregated.
+	 * @return bool|null True to aggregate the bucket, false to skip it, null if a query failed.
+	 */
+	private static function claim_bucket( string $metric_type, DateTimeImmutable $bucket, bool $replace ): ?bool {
+		$wpdb = self::wpdb();
+
+		if ( $replace ) {
+			$deleted = $wpdb->query(
+				(string) $wpdb->prepare(
+					'DELETE FROM %i WHERE metric_type = %s AND time_bucket = %s',
+					self::get_table(),
+					$metric_type,
+					$bucket->format( 'Y-m-d H:i:s' )
+				)
+			);
+
+			return false === $deleted ? null : true;
+		}
+
+		$existing = $wpdb->get_var(
+			(string) $wpdb->prepare(
+				'SELECT COUNT(*) FROM %i WHERE metric_type = %s AND time_bucket = %s',
+				self::get_table(),
+				$metric_type,
+				$bucket->format( 'Y-m-d H:i:s' )
+			)
+		);
+
+		return (int) $existing === 0;
+	}
+
+	/**
 	 * Aggregates hourly error counts for a specific hour.
 	 *
 	 * @param DateTimeImmutable $hour The hour to aggregate (e.g., '2025-01-15 14:00:00').
+	 * @param bool              $replace Whether to recompute the bucket if it's already aggregated.
 	 * @return int|null Number of metric records created, or null if the query failed.
 	 */
-	public static function aggregate_errors_hourly( DateTimeImmutable $hour ): ?int {
+	public static function aggregate_errors_hourly( DateTimeImmutable $hour, bool $replace = false ): ?int {
 		$wpdb = self::wpdb();
 		$event_table = EventRunModel::get_table();
 		$metric_table = self::get_table();
@@ -60,17 +102,14 @@ final class EventMetricModel extends Model {
 		$hour_start = $hour->setTime( (int) $hour->format( 'H' ), 0, 0 );
 		$hour_end = $hour_start->modify( '+1 hour' );
 
-		// Bail out if metrics for this hour have already been aggregated.
-		$existing = $wpdb->get_var(
-			(string) $wpdb->prepare(
-				'SELECT COUNT(*) FROM %i WHERE metric_type = %s AND time_bucket = %s',
-				$metric_table,
-				EventMetric::TYPE_ERRORS_HOURLY,
-				$hour_start->format( 'Y-m-d H:i:s' )
-			)
-		);
+		// Skip a bucket that's already aggregated, unless it's being recomputed.
+		$claimed = self::claim_bucket( EventMetric::TYPE_ERRORS_HOURLY, $hour_start, $replace );
 
-		if ( (int) $existing > 0 ) {
+		if ( null === $claimed ) {
+			return null;
+		}
+
+		if ( ! $claimed ) {
 			return 0;
 		}
 
@@ -85,7 +124,7 @@ final class EventMetricModel extends Model {
 						'error',
 						COUNT(*)
 					FROM %i
-					WHERE fatal = 1
+					WHERE status = %s
 					AND started_at >= %s
 					AND started_at < %s
 					GROUP BY site_id
@@ -94,6 +133,7 @@ final class EventMetricModel extends Model {
 				EventMetric::TYPE_ERRORS_HOURLY,
 				$hour_start->format( 'Y-m-d H:i:s' ),
 				$event_table,
+				EventRun::STATUS_ERRORED,
 				$hour_start->format( 'Y-m-d H:i:s.v' ),
 				$hour_end->format( 'Y-m-d H:i:s.v' )
 			)
@@ -106,9 +146,10 @@ final class EventMetricModel extends Model {
 	 * Aggregates hourly warning counts for a specific hour.
 	 *
 	 * @param DateTimeImmutable $hour The hour to aggregate (e.g., '2025-01-15 14:00:00').
+	 * @param bool              $replace Whether to recompute the bucket if it's already aggregated.
 	 * @return int|null Number of metric records created, or null if the query failed.
 	 */
-	public static function aggregate_warnings_hourly( DateTimeImmutable $hour ): ?int {
+	public static function aggregate_warnings_hourly( DateTimeImmutable $hour, bool $replace = false ): ?int {
 		$wpdb = self::wpdb();
 		$event_table = EventRunModel::get_table();
 		$metric_table = self::get_table();
@@ -117,17 +158,14 @@ final class EventMetricModel extends Model {
 		$hour_start = $hour->setTime( (int) $hour->format( 'H' ), 0, 0 );
 		$hour_end = $hour_start->modify( '+1 hour' );
 
-		// Bail out if metrics for this hour have already been aggregated.
-		$existing = $wpdb->get_var(
-			(string) $wpdb->prepare(
-				'SELECT COUNT(*) FROM %i WHERE metric_type = %s AND time_bucket = %s',
-				$metric_table,
-				EventMetric::TYPE_WARNINGS_HOURLY,
-				$hour_start->format( 'Y-m-d H:i:s' )
-			)
-		);
+		// Skip a bucket that's already aggregated, unless it's being recomputed.
+		$claimed = self::claim_bucket( EventMetric::TYPE_WARNINGS_HOURLY, $hour_start, $replace );
 
-		if ( (int) $existing > 0 ) {
+		if ( null === $claimed ) {
+			return null;
+		}
+
+		if ( ! $claimed ) {
 			return 0;
 		}
 
@@ -163,9 +201,10 @@ final class EventMetricModel extends Model {
 	 * Aggregates daily average hook durations for a specific day.
 	 *
 	 * @param DateTimeImmutable $day The day to aggregate (e.g., 'yesterday').
+	 * @param bool              $replace Whether to recompute the bucket if it's already aggregated.
 	 * @return int|null Number of metric records created, or null if the query failed.
 	 */
-	public static function aggregate_hook_duration_daily( DateTimeImmutable $day ): ?int {
+	public static function aggregate_hook_duration_daily( DateTimeImmutable $day, bool $replace = false ): ?int {
 		$wpdb = self::wpdb();
 		$event_table = EventRunModel::get_table();
 		$metric_table = self::get_table();
@@ -174,17 +213,14 @@ final class EventMetricModel extends Model {
 		$day_start = $day->setTime( 0, 0, 0 );
 		$day_end = $day_start->modify( '+1 day' );
 
-		// Bail out if metrics for this day have already been aggregated.
-		$existing = $wpdb->get_var(
-			(string) $wpdb->prepare(
-				'SELECT COUNT(*) FROM %i WHERE metric_type = %s AND time_bucket = %s',
-				$metric_table,
-				EventMetric::TYPE_HOOK_DURATION_DAILY,
-				$day_start->format( 'Y-m-d H:i:s' )
-			)
-		);
+		// Skip a bucket that's already aggregated, unless it's being recomputed.
+		$claimed = self::claim_bucket( EventMetric::TYPE_HOOK_DURATION_DAILY, $day_start, $replace );
 
-		if ( (int) $existing > 0 ) {
+		if ( null === $claimed ) {
+			return null;
+		}
+
+		if ( ! $claimed ) {
 			return 0;
 		}
 
@@ -220,9 +256,10 @@ final class EventMetricModel extends Model {
 	 * Aggregates hourly average hook durations for a specific hour.
 	 *
 	 * @param DateTimeImmutable $hour The hour to aggregate (e.g., '2025-01-15 14:00:00').
+	 * @param bool              $replace Whether to recompute the bucket if it's already aggregated.
 	 * @return int|null Number of metric records created, or null if the query failed.
 	 */
-	public static function aggregate_hook_duration_hourly( DateTimeImmutable $hour ): ?int {
+	public static function aggregate_hook_duration_hourly( DateTimeImmutable $hour, bool $replace = false ): ?int {
 		$wpdb = self::wpdb();
 		$event_table = EventRunModel::get_table();
 		$metric_table = self::get_table();
@@ -231,17 +268,14 @@ final class EventMetricModel extends Model {
 		$hour_start = $hour->setTime( (int) $hour->format( 'H' ), 0, 0 );
 		$hour_end = $hour_start->modify( '+1 hour' );
 
-		// Bail out if metrics for this hour have already been aggregated.
-		$existing = $wpdb->get_var(
-			(string) $wpdb->prepare(
-				'SELECT COUNT(*) FROM %i WHERE metric_type = %s AND time_bucket = %s',
-				$metric_table,
-				EventMetric::TYPE_HOOK_DURATION_HOURLY,
-				$hour_start->format( 'Y-m-d H:i:s' )
-			)
-		);
+		// Skip a bucket that's already aggregated, unless it's being recomputed.
+		$claimed = self::claim_bucket( EventMetric::TYPE_HOOK_DURATION_HOURLY, $hour_start, $replace );
 
-		if ( (int) $existing > 0 ) {
+		if ( null === $claimed ) {
+			return null;
+		}
+
+		if ( ! $claimed ) {
 			return 0;
 		}
 

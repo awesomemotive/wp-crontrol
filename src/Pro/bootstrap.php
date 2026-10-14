@@ -31,6 +31,12 @@ const INTERNAL_HOOKS = array(
 const LOG_RETENTION_DAYS = 30;
 
 /**
+ * Number of most recent hours that the metrics job recomputes on every run, so runs that finished
+ * after their hour was first aggregated are counted.
+ */
+const METRICS_RECHECK_HOURS = 3;
+
+/**
  * Number of days that aggregated metrics are kept.
  */
 const METRIC_RETENTION_DAYS = 90;
@@ -173,6 +179,10 @@ function metrics(): void {
  * Aggregates every completed hour and day since the last aggregation, so hours that cron
  * missed are filled in later. At most two days of hours and a week of days per run.
  *
+ * Runs are bucketed by the time they started, and a run that's still going when its hour is
+ * aggregated isn't counted yet. So the last few hours, and yesterday, are recomputed on every run,
+ * which counts a run that starts at 10:59 and finishes at 11:02.
+ *
  * @param \DateTimeImmutable $now The current time in UTC.
  */
 function aggregate_missing_metrics( \DateTimeImmutable $now ): void {
@@ -185,17 +195,22 @@ function aggregate_missing_metrics( \DateTimeImmutable $now ): void {
 		update_site_option( 'crontrol_metrics_last_hour', $last_hour );
 	}
 
-	$hour = ( new \DateTimeImmutable( $last_hour, new \DateTimeZone( 'UTC' ) ) )->modify( '+1 hour' );
+	$next_hour = ( new \DateTimeImmutable( $last_hour, new \DateTimeZone( 'UTC' ) ) )->modify( '+1 hour' );
 
-	if ( $hour < $current_hour->modify( '-48 hours' ) ) {
-		$hour = $current_hour->modify( '-48 hours' );
+	if ( $next_hour < $current_hour->modify( '-48 hours' ) ) {
+		$next_hour = $current_hour->modify( '-48 hours' );
 	}
 
+	// Hours before $next_hour are already aggregated; the most recent of them are recomputed.
+	$recheck_hour = $current_hour->modify( '-' . METRICS_RECHECK_HOURS . ' hours' );
+	$hour         = min( $next_hour, $recheck_hour );
+
 	while ( $hour < $current_hour ) {
+		$replace = $hour < $next_hour;
 		$results = array(
-			EventMetricModel::aggregate_errors_hourly( $hour ),
-			EventMetricModel::aggregate_warnings_hourly( $hour ),
-			EventMetricModel::aggregate_hook_duration_hourly( $hour ),
+			EventMetricModel::aggregate_errors_hourly( $hour, $replace ),
+			EventMetricModel::aggregate_warnings_hourly( $hour, $replace ),
+			EventMetricModel::aggregate_hook_duration_hourly( $hour, $replace ),
 		);
 
 		// Stop at a failed write so the hour is retried next time. Hours that were written are
@@ -204,7 +219,10 @@ function aggregate_missing_metrics( \DateTimeImmutable $now ): void {
 			return;
 		}
 
-		update_site_option( 'crontrol_metrics_last_hour', $hour->format( 'Y-m-d H:i:s' ) );
+		if ( ! $replace ) {
+			update_site_option( 'crontrol_metrics_last_hour', $hour->format( 'Y-m-d H:i:s' ) );
+		}
+
 		$hour = $hour->modify( '+1 hour' );
 	}
 
@@ -216,18 +234,26 @@ function aggregate_missing_metrics( \DateTimeImmutable $now ): void {
 		update_site_option( 'crontrol_metrics_last_day', $last_day );
 	}
 
-	$day = ( new \DateTimeImmutable( $last_day, new \DateTimeZone( 'UTC' ) ) )->modify( '+1 day' );
+	$next_day = ( new \DateTimeImmutable( $last_day, new \DateTimeZone( 'UTC' ) ) )->modify( '+1 day' );
 
-	if ( $day < $today->modify( '-7 days' ) ) {
-		$day = $today->modify( '-7 days' );
+	if ( $next_day < $today->modify( '-7 days' ) ) {
+		$next_day = $today->modify( '-7 days' );
 	}
 
+	// Yesterday is recomputed, for runs that started before midnight and finished after it.
+	$day = min( $next_day, $today->modify( '-1 day' ) );
+
 	while ( $day < $today ) {
-		if ( null === EventMetricModel::aggregate_hook_duration_daily( $day ) ) {
+		$replace = $day < $next_day;
+
+		if ( null === EventMetricModel::aggregate_hook_duration_daily( $day, $replace ) ) {
 			return;
 		}
 
-		update_site_option( 'crontrol_metrics_last_day', $day->format( 'Y-m-d H:i:s' ) );
+		if ( ! $replace ) {
+			update_site_option( 'crontrol_metrics_last_day', $day->format( 'Y-m-d H:i:s' ) );
+		}
+
 		$day = $day->modify( '+1 day' );
 	}
 }

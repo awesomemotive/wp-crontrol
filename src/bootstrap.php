@@ -2596,17 +2596,14 @@ function get_hook_callbacks( $name ) {
 		 */
 		foreach ( $action as $priority => $callbacks ) {
 			foreach ( $callbacks as $callback ) {
+				// The logging observers are WP Crontrol's own, not an action for the event.
+				if ( Pro\Log::is_observer( $callback['function'] ) ) {
+					continue;
+				}
+
 				$callback = populate_callback( $callback );
 
 				if ( __NAMESPACE__ . '\\pauser()' === $callback['name'] ) {
-					continue;
-				}
-
-				if ( 'Crontrol\\Pro\\Log->log_start()' === $callback['name'] ) {
-					continue;
-				}
-
-				if ( 'Crontrol\\Pro\\Log->log_end()' === $callback['name'] ) {
 					continue;
 				}
 

@@ -52,6 +52,16 @@ class Log {
 	private array $observers = array();
 
 	/**
+	 * Object IDs of every start and end callback currently attached by any Log instance.
+	 *
+	 * WP Crontrol uses this to leave its own observers out of a hook's list of actions, so a hook
+	 * with no other callbacks still shows the "no action" warning.
+	 *
+	 * @var array<int, true>
+	 */
+	private static array $observer_ids = array();
+
+	/**
 	 * The callbacks that route logged messages to the run in progress, keyed by hook name.
 	 *
 	 * @var array<string, \Closure>
@@ -101,6 +111,18 @@ class Log {
 		add_action( $hook, $end, 9999, 0 );
 
 		$this->observers[ $hook ] = array( $start, $end );
+
+		self::$observer_ids[ spl_object_id( $start ) ] = true;
+		self::$observer_ids[ spl_object_id( $end ) ]   = true;
+	}
+
+	/**
+	 * Whether the given callback is one of the logging observers attached to a hook.
+	 *
+	 * @param mixed $callback A callback from the hook's list of callbacks.
+	 */
+	public static function is_observer( $callback ): bool {
+		return $callback instanceof \Closure && isset( self::$observer_ids[ spl_object_id( $callback ) ] );
 	}
 
 	/**
@@ -116,7 +138,11 @@ class Log {
 		remove_action( $hook, $this->observers[ $hook ][0], -9999 );
 		remove_action( $hook, $this->observers[ $hook ][1], 9999 );
 
-		unset( $this->observers[ $hook ] );
+		unset(
+			self::$observer_ids[ spl_object_id( $this->observers[ $hook ][0] ) ],
+			self::$observer_ids[ spl_object_id( $this->observers[ $hook ][1] ) ],
+			$this->observers[ $hook ]
+		);
 	}
 
 	/**
