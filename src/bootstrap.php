@@ -60,6 +60,9 @@ function init_hooks() {
 	add_action( 'init',                               __NAMESPACE__ . '\action_init' );
 	add_action( 'admin_init',                         __NAMESPACE__ . '\action_handle_posts' );
 	add_action( 'admin_menu',                         __NAMESPACE__ . '\action_admin_menu', 98 );
+	add_action( 'admin_menu',                         __NAMESPACE__ . '\action_top_level_menu', 100 );
+	add_filter( 'parent_file',                        __NAMESPACE__ . '\filter_parent_file' );
+	add_filter( 'submenu_file',                       __NAMESPACE__ . '\filter_submenu_file' );
 	add_filter( "plugin_action_links_{$plugin_file}", __NAMESPACE__ . '\plugin_action_links' );
 	add_filter( "network_admin_plugin_action_links_{$plugin_file}", __NAMESPACE__ . '\network_plugin_action_links' );
 	add_filter( 'removable_query_args',               __NAMESPACE__ . '\filter_removable_query_args' );
@@ -1048,6 +1051,106 @@ function action_admin_menu() {
 	foreach ( $tabs as $tab ) {
 		add_action( "load-{$tab}", __NAMESPACE__ . '\admin_help_tab' );
 	}
+}
+
+/**
+ * Returns the WP Crontrol screens shown in the top-level menu, keyed by their URL relative to the admin.
+ *
+ * The screens stay registered under Tools and Settings, so their URLs and screen IDs don't change.
+ *
+ * @return array<string,string> Menu labels keyed by admin URL.
+ */
+function get_top_level_menu_items(): array {
+	return array(
+		'tools.php?page=wp-crontrol'                => __( 'Cron Events', 'wp-crontrol' ),
+		'tools.php?page=wp-crontrol-logs'           => __( 'Cron Logs', 'wp-crontrol' ),
+		'tools.php?page=wp-crontrol-insights'       => __( 'Cron Insights', 'wp-crontrol' ),
+		'options-general.php?page=wp-crontrol-schedules' => __( 'Cron Schedules', 'wp-crontrol' ),
+	);
+}
+
+/**
+ * Whether WP Crontrol has its own top-level admin menu.
+ */
+function has_top_level_menu(): bool {
+	/**
+	 * Filters whether WP Crontrol adds its own top-level admin menu.
+	 *
+	 * Return false to keep WP Crontrol's screens under the Tools and Settings menus only.
+	 *
+	 * @param bool $show Whether to add the top-level menu. Default true.
+	 */
+	return (bool) apply_filters( 'crontrol/top_level_menu', true );
+}
+
+/**
+ * Adds a top-level WP Crontrol menu that links to the existing screens.
+ *
+ * Tools > Cron Events stays in place for people used to finding it there. The other screens move
+ * out of Tools and Settings into the new menu, but keep their URLs.
+ *
+ * Run using the 'admin_menu' action, after the screens are registered.
+ */
+function action_top_level_menu(): void {
+	if ( ! has_top_level_menu() ) {
+		return;
+	}
+
+	$items  = get_top_level_menu_items();
+	$parent = 'tools.php?page=wp-crontrol';
+
+	add_menu_page(
+		esc_html__( 'WP Crontrol', 'wp-crontrol' ),
+		esc_html__( 'Cron', 'wp-crontrol' ),
+		'manage_options',
+		$parent,
+		'',
+		'dashicons-clock',
+		79
+	);
+
+	foreach ( $items as $url => $label ) {
+		add_submenu_page( $parent, esc_html( $label ), esc_html( $label ), 'manage_options', $url );
+	}
+
+	remove_submenu_page( 'tools.php', 'wp-crontrol-logs' );
+	remove_submenu_page( 'tools.php', 'wp-crontrol-insights' );
+	remove_submenu_page( 'options-general.php', 'wp-crontrol-schedules' );
+}
+
+/**
+ * Returns the top-level menu URL for the current WP Crontrol screen, or null on other screens.
+ */
+function get_current_top_level_menu_item(): ?string {
+	global $pagenow;
+
+	if ( ! has_top_level_menu() || empty( $_GET['page'] ) ) {
+		return null;
+	}
+
+	$url = $pagenow . '?page=' . sanitize_key( wp_unslash( $_GET['page'] ) );
+
+	return array_key_exists( $url, get_top_level_menu_items() ) ? $url : null;
+}
+
+/**
+ * Highlights the top-level WP Crontrol menu on WP Crontrol's screens.
+ *
+ * @param string $parent_file The parent file.
+ * @return string The parent file.
+ */
+function filter_parent_file( $parent_file ) {
+	return get_current_top_level_menu_item() ? 'tools.php?page=wp-crontrol' : $parent_file;
+}
+
+/**
+ * Highlights the current screen in the top-level WP Crontrol menu.
+ *
+ * @param ?string $submenu_file The submenu file.
+ * @return ?string The submenu file.
+ */
+function filter_submenu_file( $submenu_file ) {
+	return get_current_top_level_menu_item() ?? $submenu_file;
 }
 
 /**
@@ -2690,22 +2793,22 @@ function interval( $since, bool $accurate = false ) {
  * @return string An HTML `<time>` element.
  */
 function time_element( int $timestamp ): string {
-	$time_format = 'g:i a';
+	/* translators: Time format for cron event times, see https://www.php.net/manual/datetime.format.php */
+	$time_format = _x( 'g:i a', 'cron event time format', 'wp-crontrol' );
 
-	$datetime_utc = gmdate( 'Y-m-d H:i:s', $timestamp );
-
+	$date_local      = wp_date( 'Y-m-d', $timestamp );
 	$timezone_local  = wp_timezone();
-	$date_local      = get_date_from_gmt( $datetime_utc, 'Y-m-d' );
 	$today_local     = ( new DateTimeImmutable( 'now', $timezone_local ) )->format( 'Y-m-d' );
 	$tomorrow_local  = ( new DateTimeImmutable( 'tomorrow', $timezone_local ) )->format( 'Y-m-d' );
 	$yesterday_local = ( new DateTimeImmutable( 'yesterday', $timezone_local ) )->format( 'Y-m-d' );
 
 	// If the offset of the date of the time is different from the offset of the site, add a marker.
-	if ( get_date_from_gmt( $datetime_utc, 'P' ) !== get_date_from_gmt( 'now', 'P' ) ) {
+	if ( wp_date( 'P', $timestamp ) !== wp_date( 'P' ) ) {
 		$time_format .= ' (P)';
 	}
 
-	$time_local = get_date_from_gmt( $datetime_utc, $time_format );
+	// wp_date() translates month and day names into the site's language.
+	$time_local = (string) wp_date( $time_format, $timestamp );
 
 	if ( $date_local === $today_local ) {
 		$date = sprintf(
@@ -2729,7 +2832,8 @@ function time_element( int $timestamp ): string {
 		$date = sprintf(
 			/* translators: 1: Date, 2: Time */
 			__( '%1$s at %2$s', 'wp-crontrol' ),
-			get_date_from_gmt( $datetime_utc, 'F jS' ),
+			/* translators: Date format for cron event dates, see https://www.php.net/manual/datetime.format.php */
+			(string) wp_date( _x( 'F jS', 'cron event date format', 'wp-crontrol' ), $timestamp ),
 			$time_local,
 		);
 	}

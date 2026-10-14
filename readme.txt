@@ -230,13 +230,14 @@ The photo was taken by <a href="https://www.flickr.com/photos/michaelpardo/21453
 
 ## Changelog ##
 
-### 1.23.0-dev (draft, not released) ###
+### 1.23.0 (draft, not released) ###
 
-* Cron event logging and Cron Insights, previously part of WP Crontrol Pro, are now included for everyone. Logging is off until you turn it on for an event.
-* Event arguments are not stored in logs, and the query strings of logged HTTP requests are removed.
-* Logs are kept for 30 days, up to 10,000 entries per site.
-* Deleting the plugin removes its log tables and logging settings.
-* WP Crontrol now shows a one-time note about its new home, which you can dismiss.
+* Cron event logging and Cron Insights, previously part of WP Crontrol Pro, are now free for everyone. Logging is off until you turn it on for an event.
+* WP Crontrol now has its own Cron menu in the admin, with Events, Logs, Insights, and Schedules in one place. Tools > Cron Events still works.
+* Dates and times in the event list can now be translated, including month names. Thanks to @zalemcitizen for the request.
+* Logs never store event arguments, and logged HTTP requests keep only the site address.
+* Logs are kept for 30 days, up to 10,000 entries per site. Deleting the plugin removes its log tables and settings.
+* Shows a one-time note about WP Crontrol's new home, which you can dismiss.
 
 ### 1.22.0 (8 October 2026) ###
 
