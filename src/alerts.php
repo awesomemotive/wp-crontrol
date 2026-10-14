@@ -166,6 +166,7 @@ function &queue(): array {
  */
 function describe_run( EventRun $run ): array {
 	return array(
+		'site_id' => get_current_blog_id(),
 		'id'      => $run->ID,
 		'hook'    => $run->hook,
 		'time'    => $run->started_at->getTimestamp(),
@@ -271,11 +272,31 @@ function flush_queue(): void {
 		return;
 	}
 
-	try {
-		send_failures( $failures, false );
-	} catch ( \Throwable $e ) {
-		// An alert must never break the site.
-		return;
+	// A network worker can run events for several sites in one request, so each site's failures go
+	// to that site's own recipients, from within that site.
+	$by_site = array();
+
+	foreach ( $failures as $failure ) {
+		$by_site[ (int) ( $failure['site_id'] ?? get_current_blog_id() ) ][] = $failure;
+	}
+
+	foreach ( $by_site as $site_id => $site_failures ) {
+		$switched = is_multisite() && get_current_blog_id() !== $site_id;
+
+		if ( $switched ) {
+			switch_to_blog( $site_id );
+		}
+
+		try {
+			send_failures( $site_failures, false );
+		} catch ( \Throwable $e ) {
+			// An alert must never break the site.
+			continue;
+		} finally {
+			if ( $switched ) {
+				restore_current_blog();
+			}
+		}
 	}
 }
 

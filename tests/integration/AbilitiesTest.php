@@ -295,6 +295,24 @@ final class AbilitiesTest extends Test {
 		self::assertSame( array(), Log::get_enabled_hooks() );
 	}
 
+	public function testLoggerHooksAndUnscheduledHooksCannotBeLogged(): void {
+		$this->admin();
+
+		foreach ( array( 'crontrol/run_finished', 'crontrol_not_scheduled_anywhere' ) as $hook ) {
+			$result = $this->ability( 'wp-crontrol/set-hook-logging' )->execute(
+				array(
+					'hook'    => $hook,
+					'enabled' => true,
+				)
+			);
+			self::assertWPError( $result, $hook );
+		}
+
+		// Even if the setting is written directly, the logger never observes its own hooks.
+		update_option( 'crontrol_log', array( 'crontrol/run_finished', self::HOOK ), true );
+		self::assertSame( array( self::HOOK ), Log::get_enabled_hooks() );
+	}
+
 	public function testLoggingCanBeToggled(): void {
 		$this->admin();
 

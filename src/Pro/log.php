@@ -91,7 +91,7 @@ class Log {
 	 * @param string $hook Hook name to observe.
 	 */
 	public function observe( string $hook ): void {
-		if ( isset( $this->observers[ $hook ] ) ) {
+		if ( isset( $this->observers[ $hook ] ) || ! self::is_loggable_hook( $hook ) ) {
 			return;
 		}
 
@@ -1133,7 +1133,17 @@ class Log {
 			return array();
 		}
 
-		return array_values( array_filter( $enabled, 'is_string' ) );
+		return array_values( array_filter( array_filter( $enabled, 'is_string' ), array( self::class, 'is_loggable_hook' ) ) );
+	}
+
+	/**
+	 * Whether a hook can be logged. WP Crontrol's own hooks never can: logging the hooks that the
+	 * logger itself fires would log forever.
+	 *
+	 * @param string $hook The hook name.
+	 */
+	public static function is_loggable_hook( string $hook ): bool {
+		return '' !== $hook && 0 !== strpos( $hook, 'crontrol/' );
 	}
 
 	public static function is_hook_logged( string $hook ): bool {

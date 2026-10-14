@@ -898,8 +898,13 @@ function set_hook_logging( $input ) {
 		return new WP_Error( 'crontrol_logging_unavailable', __( 'Cron event logging isn’t available on this site right now.', 'wp-crontrol' ), array( 'status' => 409 ) );
 	}
 
-	if ( in_array( $hook, \Crontrol\Pro\INTERNAL_HOOKS, true ) ) {
+	if ( in_array( $hook, \Crontrol\Pro\INTERNAL_HOOKS, true ) || ! Log::is_loggable_hook( $hook ) ) {
 		return new WP_Error( 'crontrol_hook_not_loggable', __( 'WP Crontrol’s own maintenance events can’t be logged.', 'wp-crontrol' ), array( 'status' => 400 ) );
+	}
+
+	// Logging can be turned on only for hooks that have scheduled cron events. Turning it off always works.
+	if ( $enabled && ! in_array( $hook, array_map( static fn ( Event\Event $event ): string => $event->hook, Event\get() ), true ) ) {
+		return new WP_Error( 'crontrol_hook_not_found', __( 'There are no scheduled cron events with this hook name.', 'wp-crontrol' ), array( 'status' => 404 ) );
 	}
 
 	if ( $enabled ) {
