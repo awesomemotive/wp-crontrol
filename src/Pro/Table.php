@@ -609,9 +609,9 @@ final class Table extends \WP_List_Table {
 		if ( $event->mail_failed > 0 ) {
 			$notes .= '<p><strong>' . esc_html( _n( 'An email from this run failed to send.', 'Emails from this run failed to send.', $event->mail_failed, 'wp-crontrol' ) ) . '</strong> ';
 
-			$smtp = \Crontrol\Promos\get_plugins()['wp-mail-smtp'];
+			$smtp = \Crontrol\Promos\get_plugin( 'wp-mail-smtp' );
 
-			if ( ! $smtp['active'] ) {
+			if ( $smtp && ! $smtp['active'] ) {
 				$notes .= esc_html__( 'Many hosts can’t send email reliably from WordPress. WP Mail SMTP sends it through a real mail provider instead.', 'wp-crontrol' )
 					. '</p><p>' . \Crontrol\Promos\plugin_button( 'wp-mail-smtp', $smtp );
 			}

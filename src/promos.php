@@ -60,6 +60,22 @@ function get_plugins() {
 }
 
 /**
+ * Returns one suggested plugin, or null if it isn't suggested (it can be filtered out).
+ *
+ * @param string $slug WordPress.org plugin slug.
+ * @return array{name:string,file:string,text:string,active:bool}|null
+ */
+function get_plugin( string $slug ): ?array {
+	$plugins = get_plugins();
+
+	if ( ! isset( $plugins[ $slug ] ) ) {
+		return null;
+	}
+
+	return $plugins[ $slug ];
+}
+
+/**
  * @param string $key Promo key.
  */
 function is_dismissed( $key ): bool {

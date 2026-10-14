@@ -10,7 +10,7 @@ namespace Crontrol\Abilities;
  */
 function admin_ai_page(): void {
 	$definitions = get_definitions();
-	$vibe        = \Crontrol\Promos\get_plugins()['vibe-ai'];
+	$vibe        = \Crontrol\Promos\get_plugin( 'vibe-ai' );
 
 	?>
 	<div class="wrap crontrol-ai">
@@ -98,7 +98,9 @@ function admin_ai_page(): void {
 			<div>
 				<div class="card">
 					<h2><?php esc_html_e( 'Connect an AI assistant', 'wp-crontrol' ); ?></h2>
-					<?php if ( $vibe['active'] ) : ?>
+					<?php if ( ! $vibe ) : ?>
+						<p><?php esc_html_e( 'Connect an AI assistant that supports the WordPress Abilities API, then ask it about your cron events.', 'wp-crontrol' ); ?></p>
+					<?php elseif ( $vibe['active'] ) : ?>
 						<p><?php esc_html_e( 'WPVibe is active on this site. Connect Claude, ChatGPT, or another assistant in WPVibe, then ask it about your cron events.', 'wp-crontrol' ); ?></p>
 						<p><a class="button button-primary" href="<?php echo esc_url( admin_url( 'admin.php?page=vibe-ai' ) ); ?>"><?php esc_html_e( 'Open WPVibe', 'wp-crontrol' ); ?></a></p>
 					<?php else : ?>

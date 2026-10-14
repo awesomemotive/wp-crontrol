@@ -248,6 +248,49 @@ final class AlertsTest extends Test {
 		self::assertSame( array(), Alerts\queue() );
 	}
 
+	/**
+	 * A site can filter suggestions out. The screens that mention them must still render.
+	 */
+	public function testScreensRenderWithNoSuggestedPlugins(): void {
+		$user = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		self::assertIsInt( $user );
+		wp_set_current_user( $user );
+
+		add_filter( 'crontrol/promos/plugins', '__return_empty_array' );
+		update_option(
+			Alerts\STATE_OPTION,
+			array(
+				'last_result' => array(
+					'time'  => time(),
+					'sent'  => false,
+					'error' => 'Could not instantiate mail function.',
+					'test'  => true,
+				),
+			),
+			false
+		);
+
+		ob_start();
+		Alerts\admin_alerts_page();
+		\Crontrol\Abilities\admin_ai_page();
+		$html = (string) ob_get_clean();
+
+		$run              = EventRun::start( 'crontrol_alert_notes', '', time(), array() );
+		$run->status      = EventRun::STATUS_ERRORED;
+		$run->mail_failed = 1;
+		$notes            = new \ReflectionMethod( \Crontrol\Pro\Logs\Table::class, 'run_details_notes' );
+		$notes->setAccessible( true );
+		$table = new \Crontrol\Pro\Logs\Table();
+		$html .= (string) $notes->invoke( $table, $run );
+
+		remove_all_filters( 'crontrol/promos/plugins' );
+
+		self::assertStringContainsString( 'Cron Alerts', $html );
+		self::assertStringContainsString( 'Cron AI', $html );
+		self::assertStringContainsString( 'failed to send', $html );
+		self::assertStringNotContainsString( 'WP Mail SMTP sends it', $html );
+	}
+
 	public function testReferralsAreRecordedOnceAndLocally(): void {
 		\Crontrol\Promos\record_referral( 'wp-mail-smtp' );
 		$first = get_option( \Crontrol\Promos\REFERRED_OPTION );
