@@ -1076,6 +1076,12 @@ class Log {
 	 * @return array<int,string>
 	 */
 	public static function get_enabled_hooks(): array {
+		// The setting is always saved autoloaded, so when it isn't among the autoloaded options it
+		// hasn't been set. This avoids a database query on every request while logging is off.
+		if ( ! array_key_exists( 'crontrol_log', wp_load_alloptions() ) ) {
+			return array();
+		}
+
 		$enabled = get_option( 'crontrol_log', array() );
 
 		if ( ! is_array( $enabled ) ) {

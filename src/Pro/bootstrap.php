@@ -111,12 +111,18 @@ function on_init(): void {
 
 	// Front-end requests never run cron events, so they don't need to read any logging settings.
 	if ( ! $maintenance_context && ! Log::is_cron_context() ) {
+		// Except with ALTERNATE_WP_CRON, where wp-cron.php runs later in this request.
+		if ( defined( 'ALTERNATE_WP_CRON' ) && ALTERNATE_WP_CRON ) {
+			add_filter( 'pre_get_ready_cron_jobs', __NAMESPACE__ . '\start_alternate_cron_logging' );
+		}
+
 		return;
 	}
 
 	$logging = (bool) Log::get_enabled_hooks();
 
-	if ( $maintenance_context && ( $logging || is_main_site() ) ) {
+	// Jobs are only needed once something is logged; a site that never logs reads no log settings.
+	if ( $maintenance_context && $logging ) {
 		maybe_schedule_jobs();
 	}
 
@@ -131,6 +137,24 @@ function on_init(): void {
 	}
 
 	Log::get_instance()->init();
+}
+
+/**
+ * Starts logging once wp-cron.php runs inside a front-end request, as it does with ALTERNATE_WP_CRON.
+ *
+ * WordPress also asks for the ready cron jobs before it decides to run cron, so this waits until
+ * the request is actually running cron.
+ *
+ * @param mixed $pre The value of the pre_get_ready_cron_jobs filter, returned unchanged.
+ * @return mixed
+ */
+function start_alternate_cron_logging( $pre ) {
+	if ( wp_doing_cron() ) {
+		remove_filter( 'pre_get_ready_cron_jobs', __NAMESPACE__ . '\start_alternate_cron_logging' );
+		on_init();
+	}
+
+	return $pre;
 }
 
 /**
@@ -164,14 +188,17 @@ function metrics(): void {
 
 	// The job can run from more than one site in a network. A database lock stops two runs
 	// aggregating the same hour at the same time.
-	if ( '1' !== (string) $wpdb->get_var( "SELECT GET_LOCK('crontrol_metrics', 0)" ) ) {
+	// Lock names are server-wide, so the name includes this install's database and table prefix.
+	$lock = 'crontrol_metrics_' . md5( DB_NAME . '|' . $wpdb->base_prefix );
+
+	if ( '1' !== (string) $wpdb->get_var( $wpdb->prepare( 'SELECT GET_LOCK(%s, 0)', $lock ) ) ) {
 		return;
 	}
 
 	try {
 		aggregate_missing_metrics( new \DateTimeImmutable( 'now', new \DateTimeZone( 'UTC' ) ) );
 	} finally {
-		$wpdb->query( "SELECT RELEASE_LOCK('crontrol_metrics')" );
+		$wpdb->query( $wpdb->prepare( 'SELECT RELEASE_LOCK(%s)', $lock ) );
 	}
 }
 
@@ -866,7 +893,7 @@ function filter_event_admin_messages( array $messages, string $hook, int $messag
 		// Logging is enabled, so link to this hook's logs.
 		$url = add_query_arg( [
 			'page' => 'wp-crontrol-logs',
-			'crontrol_hook' => $hook,
+			'crontrol_hook' => rawurlencode( $hook ),
 		], admin_url( 'tools.php' ) );
 
 		// The message is passed through sprintf() again later, so percent signs in the URL are escaped.
@@ -1031,12 +1058,13 @@ function filter_event_table_last_run_column( string $output, \Crontrol\Event\Eve
 
 	$url = add_query_arg( [
 		'page' => 'wp-crontrol-logs',
-		'crontrol_hook' => $event->hook,
+		'crontrol_hook' => rawurlencode( $event->hook ),
 	], admin_url( 'tools.php' ) );
 
 	$time = sprintf(
-		'<a href="%1$s">View logs</a>',
+		'<a href="%1$s">%2$s</a>',
 		esc_url( $url ),
+		esc_html__( 'View logs', 'wp-crontrol' ),
 	);
 
 	$ago = sprintf(

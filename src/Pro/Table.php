@@ -134,7 +134,7 @@ final class Table extends \WP_List_Table {
 
 		// Maintain hook filter in view links
 		if ( $current_hook ) {
-			$current_url = add_query_arg( 'crontrol_hook', $current_hook, $current_url );
+			$current_url = add_query_arg( 'crontrol_hook', rawurlencode( $current_hook ), $current_url );
 		}
 
 		$views = [];

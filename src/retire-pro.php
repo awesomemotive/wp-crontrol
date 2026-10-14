@@ -47,6 +47,11 @@ function retire_pro(): void {
 		update_option( RETIRED_PRO_NOTICE, 1, true );
 	}
 
+	// WP Crontrol reads the logging setting from the autoloaded options only.
+	if ( false !== get_option( 'crontrol_log', false ) ) {
+		wp_set_option_autoload( 'crontrol_log', true );
+	}
+
 	// The old plugin kept every hook it had seen in an autoloaded option.
 	if ( false !== get_option( 'crontrol_log_all_hooks', false ) ) {
 		wp_set_option_autoload( 'crontrol_log_all_hooks', false );

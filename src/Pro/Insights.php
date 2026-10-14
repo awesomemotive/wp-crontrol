@@ -44,7 +44,6 @@ final class Insights {
 	 */
 	public static function get(): array {
 		$events = \Crontrol\Event\get();
-		$timestamps = array();
 		$schedules = self::schedules();
 		$weekly = array();
 		$hours = array();
@@ -53,11 +52,8 @@ final class Insights {
 		$non_recurring = array();
 		$outside_range = array();
 
-		foreach ( $events as $event ) {
-			$timestamps[] = $event->timestamp;
-		}
-
-		$start_time = intdiv( $timestamps ? min( $timestamps ) : time(), HOUR_IN_SECONDS ) * HOUR_IN_SECONDS;
+		// The upcoming view starts now, not at the oldest overdue event.
+		$start_time = intdiv( time(), HOUR_IN_SECONDS ) * HOUR_IN_SECONDS;
 		$end_time = $start_time + ( self::HOURS * HOUR_IN_SECONDS );
 
 		foreach ( $schedules as $schedule ) {
