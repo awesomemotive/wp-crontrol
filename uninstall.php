@@ -13,6 +13,46 @@ if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
 }
 
 /**
+ * Whether the retired WP Crontrol Pro plugin is still active on the network or on any site.
+ *
+ * It uses the same log tables and options, so they're left in place while it's in use.
+ */
+function crontrol_uninstall_pro_in_use(): bool {
+	$pro = 'wp-crontrol-pro/wp-crontrol-pro.php';
+
+	if ( ! file_exists( WP_PLUGIN_DIR . '/' . $pro ) ) {
+		return false;
+	}
+
+	if ( ! is_multisite() ) {
+		return in_array( $pro, (array) get_option( 'active_plugins', array() ), true );
+	}
+
+	if ( array_key_exists( $pro, (array) get_site_option( 'active_sitewide_plugins', array() ) ) ) {
+		return true;
+	}
+
+	foreach ( get_sites( array(
+		'fields' => 'ids',
+		'number' => 0,
+	) ) as $site_id ) {
+		if ( in_array( $pro, (array) get_blog_option( (int) $site_id, 'active_plugins', array() ), true ) ) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
+// WP Crontrol's own user settings go either way.
+delete_metadata( 'user', 0, 'crontrol_dismissed_promos', '', true );
+delete_metadata( 'user', 0, 'crontrol_seen_tabs', '', true );
+
+if ( crontrol_uninstall_pro_in_use() ) {
+	return;
+}
+
+/**
  * Removes the per-site logging options and scheduled maintenance events for the current site.
  */
 function crontrol_uninstall_site(): void {
@@ -53,9 +93,6 @@ if ( is_multisite() ) {
 	crontrol_uninstall_site();
 }
 
-
-delete_metadata( 'user', 0, 'crontrol_dismissed_promos', '', true );
-delete_metadata( 'user', 0, 'crontrol_seen_tabs', '', true );
 
 // Forget the dismissal of the logging pointer, which WordPress keeps in a comma-separated list.
 $crontrol_pointer_users = $GLOBALS['wpdb']->get_col(
