@@ -47,6 +47,25 @@ function logging_available(): bool {
 }
 
 /**
+ * Whether logging is on for some hooks but the log tables aren't ready yet, for example just after an
+ * update and before the next admin or cron request upgrades them.
+ */
+function logs_upgrading(): bool {
+	return logging_available() && array() !== Log::get_enabled_hooks();
+}
+
+/**
+ * The message an ability returns when it has no logs to read.
+ */
+function logs_unavailable_message(): string {
+	if ( logs_upgrading() ) {
+		return __( 'Logging is on, but the cron event logs are being upgraded. Try again in a few minutes.', 'wp-crontrol' );
+	}
+
+	return __( 'Logging is off. Turn it on for the cron events you want to watch.', 'wp-crontrol' );
+}
+
+/**
  * Registers the ability category.
  */
 function register_category(): void {
@@ -793,11 +812,11 @@ function list_logs( $input = array() ): array {
 
 	if ( ! logging_available() || ! \Crontrol\Pro\tables_ready() ) {
 		return array(
-			'logging_enabled' => false,
-			'logged_hooks'    => array(),
+			'logging_enabled' => logs_upgrading(),
+			'logged_hooks'    => logs_upgrading() ? Log::get_enabled_hooks() : array(),
 			'runs'            => array(),
 			'next_before'     => null,
-			'message'         => __( 'Logging is off. Turn it on for the cron events you want to watch.', 'wp-crontrol' ),
+			'message'         => logs_unavailable_message(),
 		);
 	}
 
@@ -864,9 +883,10 @@ function get_log( $input ) {
 function get_insights(): array {
 	if ( ! logging_available() || ! \Crontrol\Pro\tables_ready() ) {
 		return array(
-			'logging_enabled' => false,
+			'logging_enabled' => logs_upgrading(),
 			'days'            => 7,
 			'hooks'           => array(),
+			'message'         => logs_unavailable_message(),
 		);
 	}
 

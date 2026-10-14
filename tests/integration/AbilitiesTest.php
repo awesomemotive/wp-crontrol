@@ -335,6 +335,30 @@ final class AbilitiesTest extends Test {
 		self::assertFalse( $off['logged'] );
 	}
 
+	public function testLogsReportAnUpgradeRatherThanLoggingOff(): void {
+		$this->admin();
+		update_option( 'crontrol_log', array( self::HOOK ), true );
+
+		// Simulate the window after an update, before the log tables have been upgraded.
+		$option  = 'crontrol_event_logs_version';
+		$version = get_site_option( $option );
+		update_site_option( $option, 0 );
+
+		try {
+			$logs     = $this->ability( 'wp-crontrol/list-logs' )->execute( array() );
+			$insights = $this->ability( 'wp-crontrol/get-insights' )->execute( array() );
+		} finally {
+			update_site_option( $option, $version );
+		}
+
+		self::assertIsArray( $logs );
+		self::assertTrue( $logs['logging_enabled'] );
+		self::assertSame( array( self::HOOK ), $logs['logged_hooks'] );
+		self::assertStringContainsString( 'upgraded', $logs['message'] );
+		self::assertIsArray( $insights );
+		self::assertTrue( $insights['logging_enabled'] );
+	}
+
 	public function testGetLogReportsUnknownIDs(): void {
 		$this->admin();
 
