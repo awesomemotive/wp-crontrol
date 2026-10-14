@@ -341,6 +341,42 @@ final class AbilitiesTest extends Test {
 		self::assertWPError( $this->ability( 'wp-crontrol/get-log' )->execute( array( 'id' => 999999 ) ) );
 	}
 
+	public function testEventsWithObjectArgumentsAreListed(): void {
+		$this->admin();
+		wp_schedule_single_event( time() + HOUR_IN_SECONDS, 'crontrol_ability_object_args', array( (object) array( 'job_id' => 123 ) ) );
+
+		$result = $this->ability( 'wp-crontrol/list-events' )->execute( array( 'search' => 'crontrol_ability_object_args' ) );
+
+		wp_clear_scheduled_hook( 'crontrol_ability_object_args', array( (object) array( 'job_id' => 123 ) ) );
+
+		self::assertIsArray( $result );
+		self::assertSame( 1, $result['total'] );
+		self::assertSame( 'crontrol_ability_object_args', $result['events'][0]['label'] );
+	}
+
+	public function testInsightsTotalsCoverEveryHook(): void {
+		$this->admin();
+		\Crontrol\Pro\init_db();
+		\Crontrol\Pro\EventRunModel::truncate();
+
+		for ( $i = 0; $i < 52; $i++ ) {
+			$run           = \Crontrol\Pro\EventRun::start( 'crontrol_insights_hook_' . $i, '', time(), array() );
+			$run->status   = \Crontrol\Pro\EventRun::STATUS_COMPLETED;
+			$run->duration = 'crontrol_insights_hook_51' === 'crontrol_insights_hook_' . $i ? 9000 : 10;
+			\Crontrol\Pro\EventRunModel::create( $run );
+		}
+
+		$result = $this->ability( 'wp-crontrol/get-insights' )->execute();
+		\Crontrol\Pro\EventRunModel::truncate();
+
+		self::assertIsArray( $result );
+		self::assertSame( 52, $result['runs'] );
+		self::assertSame( 52, $result['hook_count'] );
+		self::assertCount( 50, $result['hooks'] );
+		self::assertTrue( $result['hooks_truncated'] );
+		self::assertSame( 'crontrol_insights_hook_51', $result['slowest_hooks'][0] );
+	}
+
 	public function testListSchedulesReturnsCoreSchedules(): void {
 		$this->admin();
 

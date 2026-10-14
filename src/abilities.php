@@ -459,19 +459,30 @@ function event_type( Event\Event $event ): string {
  * @param string      $type  The event type.
  */
 function event_label( Event\Event $event, string $type ): string {
-	$name = (string) ( $event->args[0]['name'] ?? '' );
+	if ( 'php' !== $type && 'url' !== $type ) {
+		return $event->hook;
+	}
+
+	$name = crontrol_event_name( $event );
 
 	if ( 'php' === $type ) {
 		/* translators: %s: Name of the PHP cron event */
 		return '' !== $name ? sprintf( __( 'PHP cron event (%s)', 'wp-crontrol' ), $name ) : __( 'PHP cron event', 'wp-crontrol' );
 	}
 
-	if ( 'url' === $type ) {
-		/* translators: %s: Name of the URL cron event */
-		return '' !== $name ? sprintf( __( 'URL cron event (%s)', 'wp-crontrol' ), $name ) : __( 'URL cron event', 'wp-crontrol' );
-	}
+	/* translators: %s: Name of the URL cron event */
+	return '' !== $name ? sprintf( __( 'URL cron event (%s)', 'wp-crontrol' ), $name ) : __( 'URL cron event', 'wp-crontrol' );
+}
 
-	return $event->hook;
+/**
+ * Returns the display name of a PHP or URL cron event, or an empty string.
+ *
+ * @param Event\Event $event The event.
+ */
+function crontrol_event_name( Event\Event $event ): string {
+	$args = is_array( $event->args ) ? ( $event->args[0] ?? null ) : null;
+
+	return ( is_array( $args ) && isset( $args['name'] ) && is_scalar( $args['name'] ) ) ? (string) $args['name'] : '';
 }
 
 /**
@@ -508,11 +519,12 @@ function format_event( Event\Event $event ): array {
 	);
 
 	if ( 'php' === $type ) {
-		$output['name'] = (string) ( $event->args[0]['name'] ?? '' );
+		$output['name'] = crontrol_event_name( $event );
 	} elseif ( 'url' === $type ) {
-		$output['name']   = (string) ( $event->args[0]['name'] ?? '' );
-		$output['url']    = Log::redact_url( (string) ( $event->args[0]['url'] ?? '' ) );
-		$output['method'] = Event\url_method( $event->args[0]['method'] ?? 'GET' );
+		$args             = is_array( $event->args[0] ?? null ) ? $event->args[0] : array();
+		$output['name']   = crontrol_event_name( $event );
+		$output['url']    = Log::redact_url( is_string( $args['url'] ?? null ) ? $args['url'] : '' );
+		$output['method'] = Event\url_method( $args['method'] ?? 'GET' );
 	} else {
 		$output['args'] = is_array( $event->args ) ? array_values( $event->args ) : array();
 	}
@@ -833,7 +845,7 @@ function get_insights(): array {
 	$wpdb  = EventRunModel::wpdb();
 	$since = gmdate( 'Y-m-d H:i:s', time() - ( 7 * DAY_IN_SECONDS ) );
 	$where = '%i >= %s';
-	$args  = array( EventRunModel::get_table(), 'started_at', $since );
+	$args  = array( 'started_at', $since );
 
 	if ( is_multisite() ) {
 		$where .= ' AND %i = %d';
@@ -841,7 +853,18 @@ function get_insights(): array {
 		$args[] = get_current_blog_id();
 	}
 
+	$table = EventRunModel::get_table();
+
 	// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- $where only contains placeholders.
+	$totals = $wpdb->get_row(
+		$wpdb->prepare(
+			"SELECT COUNT(*) AS runs, SUM( status = 'errored' ) AS failures, COUNT( DISTINCT hook ) AS hooks FROM %i WHERE {$where}",
+			$table,
+			...$args
+		),
+		ARRAY_A
+	);
+
 	$rows = $wpdb->get_results(
 		$wpdb->prepare(
 			"SELECT hook, COUNT(*) AS runs, SUM( status = 'errored' ) AS failures, SUM( fatal ) AS fatals, AVG( duration ) AS avg_ms, MAX( duration ) AS max_ms
@@ -850,39 +873,46 @@ function get_insights(): array {
 			GROUP BY hook
 			ORDER BY failures DESC, runs DESC
 			LIMIT 50",
+			$table,
 			...$args
 		),
 		ARRAY_A
 	);
+
+	$slowest = $wpdb->get_col(
+		$wpdb->prepare(
+			"SELECT hook FROM %i WHERE {$where} GROUP BY hook ORDER BY AVG( duration ) DESC LIMIT 5",
+			$table,
+			...$args
+		)
+	);
 	// phpcs:enable
 
-	$hooks    = array();
-	$runs     = 0;
-	$failures = 0;
+	$hooks = array();
 
 	foreach ( (array) $rows as $row ) {
-		$hooks[]   = array(
-			'hook'        => (string) $row['hook'],
-			'runs'        => (int) $row['runs'],
-			'failures'    => (int) $row['failures'],
-			'fatals'      => (int) $row['fatals'],
-			'avg_ms'      => (int) round( (float) $row['avg_ms'] ),
-			'max_ms'      => (int) $row['max_ms'],
+		$hooks[] = array(
+			'hook'     => (string) $row['hook'],
+			'runs'     => (int) $row['runs'],
+			'failures' => (int) $row['failures'],
+			'fatals'   => (int) $row['fatals'],
+			'avg_ms'   => (int) round( (float) $row['avg_ms'] ),
+			'max_ms'   => (int) $row['max_ms'],
 		);
-		$runs     += (int) $row['runs'];
-		$failures += (int) $row['failures'];
 	}
 
-	$slowest = $hooks;
-	usort( $slowest, static fn ( array $a, array $b ): int => $b['avg_ms'] <=> $a['avg_ms'] );
+	$hook_count = (int) ( $totals['hooks'] ?? 0 );
 
 	return array(
 		'logging_enabled' => true,
 		'days'            => 7,
-		'runs'            => $runs,
-		'failures'        => $failures,
+		'runs'            => (int) ( $totals['runs'] ?? 0 ),
+		'failures'        => (int) ( $totals['failures'] ?? 0 ),
+		'hook_count'      => $hook_count,
+		// The breakdown lists up to 50 hooks, most failures first. The totals and slowest hooks cover every hook.
 		'hooks'           => $hooks,
-		'slowest_hooks'   => array_slice( wp_list_pluck( $slowest, 'hook' ), 0, 5 ),
+		'hooks_truncated' => $hook_count > count( $hooks ),
+		'slowest_hooks'   => array_map( 'strval', (array) $slowest ),
 	);
 }
 
