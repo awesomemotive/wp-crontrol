@@ -63,6 +63,8 @@ function init_hooks() {
 	add_action( 'admin_menu',                         __NAMESPACE__ . '\action_top_level_menu', 100 );
 	add_filter( 'parent_file',                        __NAMESPACE__ . '\filter_parent_file' );
 	add_filter( 'submenu_file',                       __NAMESPACE__ . '\filter_submenu_file' );
+	add_action( 'current_screen',                     __NAMESPACE__ . '\action_set_top_level_menu_title' );
+	add_action( 'admin_footer',                       __NAMESPACE__ . '\action_highlight_top_level_menu' );
 	add_filter( "plugin_action_links_{$plugin_file}", __NAMESPACE__ . '\plugin_action_links' );
 	add_filter( "network_admin_plugin_action_links_{$plugin_file}", __NAMESPACE__ . '\network_plugin_action_links' );
 	add_filter( 'removable_query_args',               __NAMESPACE__ . '\filter_removable_query_args' );
@@ -1151,6 +1153,59 @@ function filter_parent_file( $parent_file ) {
  */
 function filter_submenu_file( $submenu_file ) {
 	return get_current_top_level_menu_item() ?? $submenu_file;
+}
+
+/**
+ * Sets the page title for screens that are no longer listed under Tools or Settings.
+ *
+ * WordPress takes the title from the submenu entry, which the top-level menu replaces.
+ */
+function action_set_top_level_menu_title(): void {
+	global $title;
+
+	$url = get_current_top_level_menu_item();
+
+	if ( $url && empty( $title ) ) {
+		$title = get_top_level_menu_items()[ $url ]; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
+	}
+}
+
+/**
+ * Opens the top-level WP Crontrol menu, and closes Tools or Settings, on WP Crontrol's screens.
+ *
+ * The parent_file filter can't do this alone, because WordPress resets the parent of a page that's
+ * registered under Tools or Settings after the filter runs.
+ */
+function action_highlight_top_level_menu(): void {
+	if ( ! get_current_top_level_menu_item() ) {
+		return;
+	}
+	?>
+	<script>
+	( function () {
+		var link = document.querySelector( '#adminmenu a.menu-top[href$="tools.php?page=wp-crontrol"]' );
+		if ( ! link ) {
+			return;
+		}
+		var item = link.closest( 'li' );
+		document.querySelectorAll( '#adminmenu > li.wp-has-current-submenu' ).forEach( function ( li ) {
+			if ( li === item ) {
+				return;
+			}
+			[ li, li.querySelector( 'a.menu-top' ) ].forEach( function ( el ) {
+				if ( el ) {
+					el.classList.remove( 'wp-has-current-submenu', 'wp-menu-open' );
+					el.classList.add( 'wp-not-current-submenu' );
+				}
+			} );
+		} );
+		[ item, link ].forEach( function ( el ) {
+			el.classList.remove( 'wp-not-current-submenu' );
+			el.classList.add( 'wp-has-current-submenu', 'wp-menu-open' );
+		} );
+	} )();
+	</script>
+	<?php
 }
 
 /**
