@@ -96,21 +96,30 @@ function admin_ai_page(): void {
 			</div>
 
 			<div>
-				<div class="card">
-					<h2><?php esc_html_e( 'Connect an AI assistant', 'wp-crontrol' ); ?></h2>
-					<?php if ( ! $vibe ) : ?>
-						<p><?php esc_html_e( 'Connect an AI assistant that supports the WordPress Abilities API, then ask it about your cron events.', 'wp-crontrol' ); ?></p>
-					<?php elseif ( $vibe['active'] ) : ?>
-						<p><?php esc_html_e( 'WPVibe is active on this site. Connect Claude, ChatGPT, or another assistant in WPVibe, then ask it about your cron events.', 'wp-crontrol' ); ?></p>
-						<p><a class="button button-primary" href="<?php echo esc_url( admin_url( 'admin.php?page=vibe-ai' ) ); ?>"><?php esc_html_e( 'Open WPVibe', 'wp-crontrol' ); ?></a></p>
-					<?php else : ?>
-						<p><?php esc_html_e( 'WPVibe connects Claude, ChatGPT, and other AI assistants to your site, and can use these abilities. It’s from the same team as WP Crontrol, and free to start.', 'wp-crontrol' ); ?></p>
-						<p><?php echo \Crontrol\Promos\plugin_button( 'vibe-ai', $vibe, 'button button-primary' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></p>
-					<?php endif; ?>
-					<p class="description">
-						<?php esc_html_e( 'These abilities also work with any other MCP client or AI tool that supports the WordPress Abilities API.', 'wp-crontrol' ); ?>
-					</p>
-				</div>
+				<?php if ( $vibe && ! $vibe['active'] ) : ?>
+					<?php
+					$card = \Crontrol\Promos\featured_card(
+						'vibe-ai',
+						$vibe,
+						__( 'Connect an AI assistant', 'wp-crontrol' ),
+						__( 'WPVibe connects Claude, ChatGPT, and other AI assistants to your site, and can use these abilities. It’s from the same team as WP Crontrol, and free to start.', 'wp-crontrol' )
+					);
+					echo $card; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Escaped in featured_card().
+					?>
+				<?php else : ?>
+					<div class="card">
+						<h2><?php esc_html_e( 'Connect an AI assistant', 'wp-crontrol' ); ?></h2>
+						<?php if ( $vibe ) : ?>
+							<p><?php esc_html_e( 'WPVibe is active on this site. Connect Claude, ChatGPT, or another assistant in WPVibe, then ask it about your cron events.', 'wp-crontrol' ); ?></p>
+							<p><a class="button button-primary" href="<?php echo esc_url( admin_url( 'admin.php?page=vibe-ai' ) ); ?>"><?php esc_html_e( 'Open WPVibe', 'wp-crontrol' ); ?></a></p>
+						<?php else : ?>
+							<p><?php esc_html_e( 'Connect an AI assistant that supports the WordPress Abilities API, then ask it about your cron events.', 'wp-crontrol' ); ?></p>
+						<?php endif; ?>
+					</div>
+				<?php endif; ?>
+				<p class="description">
+					<?php esc_html_e( 'These abilities also work with any other MCP client or AI tool that supports the WordPress Abilities API.', 'wp-crontrol' ); ?>
+				</p>
 			</div>
 		</div>
 	</div>

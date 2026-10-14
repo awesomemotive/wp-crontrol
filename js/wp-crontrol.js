@@ -100,3 +100,26 @@ window.wpCrontrol.pointers?.logs && window.jQuery && jQuery( document ).ready( f
 		} )
 		.pointer('open');
 } );
+
+// Dismissing a suggestion hides it in place and saves the dismissal in the background, so a
+// half-written cron event form isn't lost. Without JavaScript the link reloads the page instead.
+document.addEventListener( 'click', ( event ) => {
+	const link = event.target.closest( '.crontrol-promo-dismiss' );
+
+	if ( ! link || ! window.fetch ) {
+		return;
+	}
+
+	const promo = link.closest( '[data-crontrol-promo]' );
+
+	if ( ! promo ) {
+		return;
+	}
+
+	event.preventDefault();
+	promo.remove();
+
+	const url = new URL( link.href );
+	url.searchParams.set( 'crontrol_dismiss_background', '1' );
+	window.fetch( url.toString(), { credentials: 'same-origin' } );
+} );

@@ -10,7 +10,19 @@ namespace Crontrol\Promos;
 
 const DISMISSED_META = 'crontrol_dismissed_promos';
 
+/**
+ * The suggestions that can be dismissed, each for good, per user.
+ */
+const DISMISSIBLE = array( 'welcome', 'no-backup', 'wpcode-tip' );
+
+/**
+ * The screens that show the new-home panel.
+ */
+const PANEL_TABS = array( 'events', 'logs', 'insights', 'alerts', 'ai', 'schedules' );
+
 add_action( 'crontrol/tab-header', __NAMESPACE__ . '\show_welcome_panel', 30 );
+add_action( 'crontrol/tab-header', __NAMESPACE__ . '\show_backup_notice', 40 );
+add_action( 'crontrol/manage/hookcode', __NAMESPACE__ . '\show_wpcode_tip' );
 add_action( 'admin_init', __NAMESPACE__ . '\action_dismiss' );
 add_action( 'wp_ajax_crontrol_record_referral', __NAMESPACE__ . '\ajax_record_referral' );
 
@@ -23,15 +35,14 @@ const REFERRED_OPTION = 'wp_crontrol_referred_plugins';
 /**
  * Returns the plugins we suggest, keyed by WordPress.org slug.
  *
- * @return array<string,array{name:string,file:string,text:string,active:bool}>
+ * @return array<string,array{name:string,file:string,text:string,active:bool,installed:bool}>
  */
 function get_plugins() {
-	/**
-	 * Filters the suggested plugins.
-	 *
-	 * @param array<string,array{name:string,file:string,text:string,active:bool}> $plugins Plugins keyed by WordPress.org slug.
-	 */
-	return apply_filters( 'crontrol/promos/plugins', array(
+	if ( ! function_exists( 'get_plugins' ) ) {
+		require_once ABSPATH . 'wp-admin/includes/plugin.php';
+	}
+
+	$plugins = array(
 		'vibe-ai'                    => array(
 			'name'   => 'WPVibe',
 			'file'   => 'vibe-ai/vibe-ai.php',
@@ -56,14 +67,34 @@ function get_plugins() {
 			'text'   => __( 'Keep custom PHP in snippets you can switch off, without editing your theme’s functions.php file.', 'wp-crontrol' ),
 			'active' => function_exists( 'wpcode' ) || class_exists( 'WPCode' ),
 		),
-	) );
+	);
+
+	$installed = \get_plugins();
+	$plugins   = array_map(
+		/**
+		 * @param array{name:string,file:string,text:string,active:bool} $plugin
+		 * @return array{name:string,file:string,text:string,active:bool,installed:bool}
+		 */
+		static function ( array $plugin ) use ( $installed ): array {
+			$plugin['installed'] = array_key_exists( $plugin['file'], $installed );
+			return $plugin;
+		},
+		$plugins
+	);
+
+	/**
+	 * Filters the suggested plugins.
+	 *
+	 * @param array<string,array{name:string,file:string,text:string,active:bool,installed:bool}> $plugins Plugins keyed by WordPress.org slug.
+	 */
+	return apply_filters( 'crontrol/promos/plugins', $plugins );
 }
 
 /**
  * Returns one suggested plugin, or null if it isn't suggested (it can be filtered out).
  *
  * @param string $slug WordPress.org plugin slug.
- * @return array{name:string,file:string,text:string,active:bool}|null
+ * @return array{name:string,file:string,text:string,active:bool,installed:bool}|null
  */
 function get_plugin( string $slug ): ?array {
 	$plugins = get_plugins();
@@ -73,6 +104,43 @@ function get_plugin( string $slug ): ?array {
 	}
 
 	return $plugins[ $slug ];
+}
+
+/**
+ * Whether to suggest a plugin to the current user: it isn't active, and they can install or activate it.
+ *
+ * @param array{name:string,file:string,text:string,active:bool,installed:bool}|null $plugin The plugin.
+ */
+function can_offer( ?array $plugin ): bool {
+	if ( ! $plugin || ! empty( $plugin['active'] ) ) {
+		return false;
+	}
+
+	if ( ! empty( $plugin['installed'] ) ) {
+		return current_user_can( 'activate_plugin', $plugin['file'] );
+	}
+
+	return current_user_can( 'install_plugins' );
+}
+
+/**
+ * The plugin's icon, bundled with WP Crontrol so nothing loads from elsewhere. Empty if there isn't one.
+ *
+ * @param string $slug WordPress.org plugin slug.
+ * @param int    $size Width and height in pixels.
+ */
+function icon( string $slug, int $size = 32 ): string {
+	$path = 'images/promos/' . $slug . '.png';
+
+	if ( ! file_exists( dirname( \Crontrol\PLUGIN_FILE ) . '/' . $path ) ) {
+		return '';
+	}
+
+	return sprintf(
+		'<img class="crontrol-promo-icon" src="%1$s" width="%2$d" height="%2$d" alt="" />',
+		esc_url( plugin_dir_url( \Crontrol\PLUGIN_FILE ) . $path ),
+		$size
+	);
 }
 
 /**
@@ -95,36 +163,35 @@ function dismiss_url( $key ): string {
 }
 
 /**
- * Button that installs and activates a plugin in place, using WordPress's own installer.
+ * Button that installs and activates a plugin in place, using WordPress's own installer. It names the plugin.
  *
  * Without JavaScript the button falls back to WordPress's standard install or activate screen.
  * Users who can't install plugins get a link to the plugin's WordPress.org page instead.
  *
- * @param string                                         $slug   WordPress.org plugin slug.
- * @param array{name:string,file:string,text:string,active:bool} $plugin The plugin.
- * @param string                                         $classes Extra classes for the button.
+ * @param string                                                                $slug    WordPress.org plugin slug.
+ * @param array{name:string,file:string,text:string,active:bool,installed:bool} $plugin  The plugin.
+ * @param string                                                                $classes Extra classes for the button.
  */
 function plugin_button( $slug, array $plugin, $classes = 'button' ): string {
-	if ( ! function_exists( 'get_plugins' ) ) {
-		require_once ABSPATH . 'wp-admin/includes/plugin.php';
-	}
-
-	$installed = array_key_exists( $plugin['file'], \get_plugins() );
+	$installed = ! empty( $plugin['installed'] );
 
 	if ( $installed && current_user_can( 'activate_plugin', $plugin['file'] ) ) {
 		$action = 'activate';
-		$label  = __( 'Activate', 'wp-crontrol' );
-		$url    = wp_nonce_url( self_admin_url( 'plugins.php?action=activate&plugin=' . rawurlencode( $plugin['file'] ) ), 'activate-plugin_' . $plugin['file'] );
+		/* translators: %s: Plugin name */
+		$label = sprintf( __( 'Activate %s', 'wp-crontrol' ), $plugin['name'] );
+		$url   = wp_nonce_url( self_admin_url( 'plugins.php?action=activate&plugin=' . rawurlencode( $plugin['file'] ) ), 'activate-plugin_' . $plugin['file'] );
 	} elseif ( ! $installed && current_user_can( 'install_plugins' ) ) {
 		$action = 'install';
-		$label  = __( 'Install for free', 'wp-crontrol' );
-		$url    = wp_nonce_url( self_admin_url( 'update.php?action=install-plugin&plugin=' . rawurlencode( $slug ) ), 'install-plugin_' . $slug );
+		/* translators: %s: Plugin name */
+		$label = sprintf( __( 'Install %s (free)', 'wp-crontrol' ), $plugin['name'] );
+		$url   = wp_nonce_url( self_admin_url( 'update.php?action=install-plugin&plugin=' . rawurlencode( $slug ) ), 'install-plugin_' . $slug );
 	} else {
 		return sprintf(
 			'<a href="%1$s" class="%2$s">%3$s</a>',
 			esc_url( 'https://wordpress.org/plugins/' . $slug . '/' ),
 			esc_attr( $classes ),
-			esc_html__( 'Learn more', 'wp-crontrol' )
+			/* translators: %s: Plugin name */
+			esc_html( sprintf( __( 'Learn more about %s', 'wp-crontrol' ), $plugin['name'] ) )
 		);
 	}
 
@@ -140,6 +207,26 @@ function plugin_button( $slug, array $plugin, $classes = 'button' ): string {
 		esc_attr( $plugin['name'] ),
 		esc_html( $label ),
 		esc_url( 'vibe-ai' === $slug ? admin_url( 'admin.php?page=vibe-ai' ) : '' )
+	);
+}
+
+/**
+ * A highlighted card recommending one plugin, for the screen where it helps most.
+ *
+ * @param string                                                                $slug    WordPress.org plugin slug.
+ * @param array{name:string,file:string,text:string,active:bool,installed:bool} $plugin  The plugin.
+ * @param string                                                                $heading The card heading.
+ * @param string                                                                $text    Why the plugin helps here.
+ */
+function featured_card( string $slug, array $plugin, string $heading, string $text ): string {
+	return sprintf(
+		'<div class="crontrol-featured" data-slug="%1$s"><span class="crontrol-featured-badge">%2$s</span><div class="crontrol-featured-head">%3$s<h2>%4$s</h2></div><p>%5$s</p><p>%6$s</p></div>',
+		esc_attr( $slug ),
+		esc_html__( 'Recommended', 'wp-crontrol' ),
+		icon( $slug, 48 ),
+		esc_html( $heading ),
+		esc_html( $text ),
+		plugin_button( $slug, $plugin, 'button button-primary button-hero' )
 	);
 }
 
@@ -161,10 +248,14 @@ function enqueue_installer(): void {
 	$strings = array(
 		'ajaxUrl'    => admin_url( 'admin-ajax.php' ),
 		'nonce'      => wp_create_nonce( 'crontrol-referral' ),
-		'installing' => __( 'Installing…', 'wp-crontrol' ),
-		'activating' => __( 'Activating…', 'wp-crontrol' ),
-		'active'     => __( 'Active', 'wp-crontrol' ),
-		'failed'     => __( 'Installation failed', 'wp-crontrol' ),
+		/* translators: %s: Plugin name */
+		'installing' => __( 'Installing %s…', 'wp-crontrol' ),
+		/* translators: %s: Plugin name */
+		'activating' => __( 'Activating %s…', 'wp-crontrol' ),
+		/* translators: %s: Plugin name */
+		'active'     => __( '%s is active', 'wp-crontrol' ),
+		/* translators: %s: Plugin name */
+		'failed'     => __( '%s could not be installed', 'wp-crontrol' ),
 		/* translators: %s: Plugin name */
 		'setup'      => __( 'Set up %s →', 'wp-crontrol' ),
 	);
@@ -196,11 +287,11 @@ jQuery( function ( $ ) {
 				$button.removeClass( 'crontrol-promo-install updating-message' ).addClass( 'button-primary' ).attr( 'href', setup ).text( crontrolPromo.setup.replace( '%s', $button.data( 'name' ) ) );
 				return;
 			}
-			$button.removeClass( 'updating-message' ).addClass( 'button-disabled' ).attr( 'aria-disabled', 'true' ).text( crontrolPromo.active );
+			$button.removeClass( 'updating-message' ).addClass( 'button-disabled' ).attr( 'aria-disabled', 'true' ).text( crontrolPromo.active.replace( '%s', $button.data( 'name' ) ) );
 		};
 
 		var activate = function () {
-			$button.text( crontrolPromo.activating );
+			$button.text( crontrolPromo.activating.replace( '%s', $button.data( 'name' ) ) );
 			wp.updates.activatePlugin( {
 				name: $button.data( 'name' ),
 				slug: $button.data( 'slug' ),
@@ -220,7 +311,7 @@ jQuery( function ( $ ) {
 			return;
 		}
 
-		$button.text( crontrolPromo.installing );
+		$button.text( crontrolPromo.installing.replace( '%s', $button.data( 'name' ) ) );
 		wp.updates.installPlugin( {
 			slug: $button.data( 'slug' ),
 			success: function ( response ) {
@@ -238,7 +329,7 @@ jQuery( function ( $ ) {
 				whenUnlocked();
 			},
 			error: function () {
-				$button.removeClass( 'updating-message' ).text( crontrolPromo.failed );
+				$button.removeClass( 'updating-message' ).text( crontrolPromo.failed.replace( '%s', $button.data( 'name' ) ) );
 			}
 		} );
 	} );
@@ -257,7 +348,7 @@ function action_dismiss(): void {
 
 	$key = sanitize_key( wp_unslash( $_GET['crontrol_dismiss_promo'] ) );
 
-	if ( 'welcome' !== $key ) {
+	if ( ! in_array( $key, DISMISSIBLE, true ) ) {
 		return;
 	}
 
@@ -268,21 +359,26 @@ function action_dismiss(): void {
 	$dismissed[] = $key;
 	update_user_meta( get_current_user_id(), DISMISSED_META, array_values( array_unique( $dismissed ) ) );
 
-	wp_safe_redirect( remove_query_arg( array( 'crontrol_dismiss_promo', '_wpnonce' ) ) );
+	// The Dismiss links hide their suggestion in place and tell the server in the background.
+	if ( isset( $_GET['crontrol_dismiss_background'] ) ) {
+		wp_send_json_success();
+	}
+
+	wp_safe_redirect( remove_query_arg( array( 'crontrol_dismiss_promo', 'crontrol_dismiss_background', '_wpnonce' ) ) );
 	exit;
 }
 
 /**
- * Whether the new-home panel shows on the given tab for the current user.
+ * Whether the new-home panel shows on the given tab for the current user. One dismissal hides it on every tab.
  *
  * @param string $tab The current tab.
  */
 function is_welcome_panel_visible( $tab ): bool {
-	return 'events' === $tab && ! is_dismissed( 'welcome' );
+	return in_array( $tab, PANEL_TABS, true ) && ! is_dismissed( 'welcome' );
 }
 
 /**
- * One panel at the top of the Cron Events and Cron Schedules screens.
+ * One panel at the top of each WP Crontrol screen, until it's dismissed.
  *
  * @param string $tab The current tab.
  */
@@ -291,38 +387,11 @@ function show_welcome_panel( $tab ): void {
 		return;
 	}
 
-	if ( ! function_exists( 'get_plugins' ) ) {
-		require_once ABSPATH . 'wp-admin/includes/plugin.php';
-	}
-
-	$installed = \get_plugins();
-
-	// Only suggest plugins the site doesn't have. One that's installed but inactive was switched off on purpose.
-	$plugins = array_filter(
-		get_plugins(),
-		function ( $plugin ) use ( $installed ) {
-			return ! $plugin['active'] && ! array_key_exists( $plugin['file'], $installed );
-		}
-	);
+	// Only suggest plugins that aren't active, to people who can install or activate them.
+	$plugins = array_filter( get_plugins(), __NAMESPACE__ . '\can_offer' );
 
 	?>
-	<style>
-		.crontrol-promo { background: #fff; border: 1px solid #c3c4c7; border-left: 4px solid #2271b1; margin: 16px 0; padding: 12px 16px 16px; position: relative; }
-		.crontrol-promo h2 { margin: 4px 0 6px; font-size: 14px; }
-		.crontrol-promo > p { margin: 0 0 12px; max-width: 760px; }
-		.crontrol-promo-grid { display: grid; gap: 12px; grid-template-columns: repeat( auto-fit, minmax( 200px, 1fr ) ); }
-		.crontrol-promo-card { border: 1px solid #dcdcde; border-radius: 4px; display: flex; flex-direction: column; padding: 12px; }
-		.crontrol-promo-card strong { font-size: 13px; }
-		.crontrol-promo-card p { color: #50575e; flex: 1; margin: 6px 0 10px; }
-		.crontrol-promo-card .button { align-self: flex-start; }
-		.crontrol-promo-dismiss { position: absolute; right: 12px; top: 10px; text-decoration: none; }
-		.crontrol-promo-quote { border-left: 3px solid #dcdcde; margin: 8px 0 12px; max-width: 760px; padding: 2px 0 2px 12px; }
-		.crontrol-promo-quote p { font-style: italic; margin: 0 0 4px; }
-		.crontrol-promo-quote cite { color: #50575e; font-style: normal; }
-		.crontrol-promo-label { color: #50575e; font-weight: 600; margin: 0 !important; }
-		.crontrol-promo-divider { border: 0; border-top: 1px solid #dcdcde; margin: 4px 0 12px; }
-	</style>
-	<div class="crontrol-promo">
+	<div class="crontrol-promo" data-crontrol-promo="welcome">
 		<a class="crontrol-promo-dismiss" href="<?php echo esc_url( dismiss_url( 'welcome' ) ); ?>">
 			<?php esc_html_e( 'Dismiss', 'wp-crontrol' ); ?>
 		</a>
@@ -349,7 +418,10 @@ function show_welcome_panel( $tab ): void {
 		<div class="crontrol-promo-grid">
 			<?php foreach ( $plugins as $slug => $plugin ) : ?>
 				<div class="crontrol-promo-card">
-					<strong><?php echo esc_html( $plugin['name'] ); ?></strong>
+					<div class="crontrol-promo-card-head">
+						<?php echo icon( $slug ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+						<strong><?php echo esc_html( $plugin['name'] ); ?></strong>
+					</div>
 					<p><?php echo esc_html( $plugin['text'] ); ?></p>
 					<?php echo plugin_button( $slug, $plugin ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
 				</div>
@@ -358,6 +430,175 @@ function show_welcome_panel( $tab ): void {
 		<?php endif; ?>
 	</div>
 	<?php
+}
+
+/**
+ * Backup plugins, by plugin file. While one is active the site is taken to have backups.
+ *
+ * @return array<int,string>
+ */
+function get_backup_plugins(): array {
+	/**
+	 * Filters the backup plugins that stop the "No scheduled backups" suggestion while they're active.
+	 *
+	 * @param array<int,string> $files Plugin files, relative to the plugins directory.
+	 */
+	return (array) apply_filters( 'crontrol/promos/backup_plugins', array(
+		'duplicator/duplicator.php',
+		'duplicator-pro/duplicator-pro.php',
+		'updraftplus/updraftplus.php',
+		'backwpup/backwpup.php',
+		'backwpup-pro/backwpup.php',
+		'backupbuddy/backupbuddy.php',
+		'solid-backups/solid-backups.php',
+		'wpvivid-backuprestore/wpvivid-backuprestore.php',
+		'wpvivid-backup-pro/wpvivid-backup-pro.php',
+		'jetpack-backup/jetpack-backup.php',
+		'vaultpress/vaultpress.php',
+		'blogvault-real-time-backup/blogvault.php',
+		'all-in-one-wp-migration/all-in-one-wp-migration.php',
+		'boldgrid-backup/boldgrid-backup.php',
+		'backup-backup/backup-backup.php',
+		'backup/backup.php',
+		'xcloner-backup-and-restore/xcloner.php',
+		'wp-time-capsule/wp-time-capsule.php',
+	) );
+}
+
+/**
+ * Hook name prefixes of scheduled backups from backup plugins.
+ *
+ * @return array<int,string>
+ */
+function get_backup_hook_prefixes(): array {
+	/**
+	 * Filters the hook name prefixes that count as a scheduled backup.
+	 *
+	 * @param array<int,string> $prefixes Hook name prefixes.
+	 */
+	return (array) apply_filters( 'crontrol/promos/backup_hooks', array(
+		'duplicator',
+		'updraft_backup',
+		'backwpup',
+		'backupbuddy',
+		'pb_backupbuddy',
+		'solid_backups',
+		'wpvivid',
+		'jetpack_backup',
+		'vaultpress',
+		'blogvault',
+		'ai1wm',
+		'boldgrid_backup',
+		'bmi_',
+		'xcloner',
+		'wptc_',
+	) );
+}
+
+/**
+ * Whether the site has a backup plugin active, or a backup event scheduled.
+ */
+function has_backups(): bool {
+	if ( ! function_exists( 'is_plugin_active' ) ) {
+		require_once ABSPATH . 'wp-admin/includes/plugin.php';
+	}
+
+	foreach ( get_backup_plugins() as $file ) {
+		if ( is_plugin_active( (string) $file ) ) {
+			return true;
+		}
+	}
+
+	$prefixes = array_filter( array_map( 'strval', get_backup_hook_prefixes() ) );
+	$crons    = _get_cron_array();
+
+	foreach ( $crons as $hooks ) {
+		foreach ( array_keys( (array) $hooks ) as $hook ) {
+			foreach ( $prefixes as $prefix ) {
+				if ( 0 === strpos( (string) $hook, $prefix ) ) {
+					return true;
+				}
+			}
+		}
+	}
+
+	return false;
+}
+
+/**
+ * Whether the "No scheduled backups" suggestion shows on the given tab for the current user.
+ *
+ * @param string $tab The current tab.
+ */
+function is_backup_notice_visible( $tab ): bool {
+	// One suggestion at a time: it waits until the new-home panel is dismissed.
+	if ( 'events' !== $tab || is_welcome_panel_visible( $tab ) || is_dismissed( 'no-backup' ) ) {
+		return false;
+	}
+
+	if ( ! can_offer( get_plugin( 'duplicator' ) ) ) {
+		return false;
+	}
+
+	return ! has_backups();
+}
+
+/**
+ * A one-line suggestion on the Cron Events screen when nothing on the site backs it up.
+ *
+ * @param string $tab The current tab.
+ */
+function show_backup_notice( $tab ): void {
+	if ( ! is_backup_notice_visible( $tab ) ) {
+		return;
+	}
+
+	$plugin = get_plugin( 'duplicator' );
+
+	if ( ! $plugin ) {
+		return;
+	}
+
+	printf(
+		'<div class="notice notice-info inline crontrol-promo-notice" data-crontrol-promo="no-backup"><p>%1$s<strong>%2$s</strong> %3$s %4$s <a class="crontrol-promo-dismiss" href="%5$s">%6$s</a></p></div>',
+		icon( 'duplicator', 20 ), // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		esc_html__( 'No scheduled backups found on this site.', 'wp-crontrol' ),
+		esc_html__( 'Unless your host backs it up for you, take a backup with Duplicator before something goes wrong.', 'wp-crontrol' ),
+		plugin_button( 'duplicator', $plugin, 'button button-small' ), // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		esc_url( dismiss_url( 'no-backup' ) ),
+		esc_html__( 'Dismiss', 'wp-crontrol' )
+	);
+}
+
+/**
+ * Whether the WPCode tip shows under the PHP code field for the current user.
+ */
+function is_wpcode_tip_visible(): bool {
+	return ! is_dismissed( 'wpcode-tip' ) && can_offer( get_plugin( 'insert-headers-and-footers' ) );
+}
+
+/**
+ * A one-line tip under the PHP code field: code that should run on every page belongs in a snippet.
+ */
+function show_wpcode_tip(): void {
+	if ( ! is_wpcode_tip_visible() ) {
+		return;
+	}
+
+	$plugin = get_plugin( 'insert-headers-and-footers' );
+
+	if ( ! $plugin ) {
+		return;
+	}
+
+	printf(
+		'<p class="crontrol-promo-tip" data-crontrol-promo="wpcode-tip">%1$s%2$s %3$s <a class="crontrol-promo-dismiss" href="%4$s">%5$s</a></p>',
+		icon( 'insert-headers-and-footers', 20 ), // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		esc_html__( 'Want this code to run on every page instead of on a schedule? WPCode keeps PHP snippets you can switch on and off.', 'wp-crontrol' ),
+		plugin_button( 'insert-headers-and-footers', $plugin, 'button button-small' ), // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		esc_url( dismiss_url( 'wpcode-tip' ) ),
+		esc_html__( 'Dismiss', 'wp-crontrol' )
+	);
 }
 
 /**

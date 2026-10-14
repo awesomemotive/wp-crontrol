@@ -254,7 +254,8 @@ The photo was taken by <a href="https://www.flickr.com/photos/michaelpardo/21453
 * Dates and times in the event list can now be translated, including month names. Thanks to @zalemcitizen for the request.
 * Logs never store event arguments, and logged HTTP requests keep only the site address.
 * Logs are kept for 30 days, up to 10,000 entries per site. Deleting the plugin removes its log tables and settings.
-* Shows a note about WP Crontrol's new home on the Cron Events screen until you dismiss it.
+* Shows a note about WP Crontrol's new home at the top of the Cron screens until you dismiss it, with plugins from the same team that aren't active on your site.
+* Suggests Duplicator on the Cron Events screen when no backup plugin or scheduled backup is found, and WPCode under the PHP cron event code field. Each suggestion can be dismissed for good.
 
 ### 1.22.0 (8 October 2026) ###
 
