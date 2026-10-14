@@ -268,6 +268,19 @@ final class AbilitiesTest extends Test {
 		self::assertArrayNotHasKey( self::HOOK, (array) get_option( \Crontrol\PAUSED_OPTION ) );
 	}
 
+	public function testPauseAndResumeAreIdempotent(): void {
+		$this->admin();
+
+		$pause  = $this->ability( 'wp-crontrol/pause-hook' );
+		$resume = $this->ability( 'wp-crontrol/resume-hook' );
+
+		self::assertIsArray( $pause->execute( array( 'hook' => self::HOOK ) ) );
+		self::assertIsArray( $pause->execute( array( 'hook' => self::HOOK ) ) );
+		self::assertIsArray( $resume->execute( array( 'hook' => self::HOOK ) ) );
+		self::assertIsArray( $resume->execute( array( 'hook' => self::HOOK ) ) );
+		self::assertArrayNotHasKey( self::HOOK, (array) get_option( \Crontrol\PAUSED_OPTION ) );
+	}
+
 	public function testMaintenanceHooksCannotBeLogged(): void {
 		$this->admin();
 

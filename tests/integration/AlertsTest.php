@@ -231,6 +231,23 @@ final class AlertsTest extends Test {
 		self::assertCount( 1, Alerts\queue() );
 	}
 
+	/**
+	 * If the throttle can't be stored, the alert isn't sent, so repeats can't get through.
+	 */
+	public function testAFailedStateWriteSendsNothing(): void {
+		$this->settings( array( 'enabled' => true ) );
+
+		// Make every write of the alert state fail.
+		add_filter( 'pre_update_option_' . Alerts\STATE_OPTION, static fn ( $value, $old ) => $old, 10, 2 );
+
+		Alerts\on_run_finished( $this->failed_run( 'crontrol_alert_unsaved' ) );
+		Alerts\on_run_finished( $this->failed_run( 'crontrol_alert_unsaved' ) );
+
+		remove_all_filters( 'pre_update_option_' . Alerts\STATE_OPTION );
+
+		self::assertSame( array(), Alerts\queue() );
+	}
+
 	public function testReferralsAreRecordedOnceAndLocally(): void {
 		\Crontrol\Promos\record_referral( 'wp-mail-smtp' );
 		$first = get_option( \Crontrol\Promos\REFERRED_OPTION );

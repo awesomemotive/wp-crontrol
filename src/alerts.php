@@ -70,10 +70,20 @@ function get_state(): array {
 }
 
 /**
+ * Saves the alert state.
+ *
  * @param array<string,mixed> $state The alert state.
+ * @return bool Whether the state is now stored. update_option() also returns false when nothing
+ *              changed, so a false result is checked against a fresh read.
  */
-function save_state( array $state ): void {
-	update_option( STATE_OPTION, $state, false );
+function save_state( array $state ): bool {
+	if ( update_option( STATE_OPTION, $state, false ) ) {
+		return true;
+	}
+
+	wp_cache_delete( STATE_OPTION, 'options' );
+
+	return get_option( STATE_OPTION ) === $state;
 }
 
 /**
@@ -85,7 +95,7 @@ function save_state( array $state ): void {
  * miss one email than to send a burst.
  *
  * @param callable $change Receives the current state and returns the new state, or null to leave it.
- * @return bool Whether the change ran.
+ * @return bool Whether the change ran and, if it changed the state, the new state was stored.
  */
 function with_state_lock( callable $change ): bool {
 	global $wpdb;
@@ -97,20 +107,19 @@ function with_state_lock( callable $change ): bool {
 		return false;
 	}
 
+	$saved = false;
+
 	try {
 		wp_cache_delete( STATE_OPTION, 'options' );
 		wp_cache_delete( 'notoptions', 'options' );
 
 		$state = $change( get_state() );
-
-		if ( is_array( $state ) ) {
-			save_state( $state );
-		}
+		$saved = is_array( $state ) ? save_state( $state ) : true;
 	} finally {
 		$wpdb->query( $wpdb->prepare( 'SELECT RELEASE_LOCK(%s)', $lock ) );
 	}
 
-	return true;
+	return $saved;
 }
 
 /**
@@ -202,8 +211,9 @@ function on_run_finished( EventRun $run ): void {
 	$now      = time();
 	$reserved = false;
 
-	// The limits are checked and reserved together, under the lock.
-	with_state_lock(
+	// The limits are checked and reserved together, under the lock. The alert is only sent once
+	// the reservation is stored, so a failed write can't let repeats through.
+	$stored = with_state_lock(
 		static function ( array $state ) use ( $run, $now, &$reserved ) {
 			// One email per hook per hour.
 			if ( isset( $state['sent'][ $run->hook ] ) && ( $now - (int) $state['sent'][ $run->hook ] ) < HOOK_THROTTLE ) {
@@ -235,7 +245,7 @@ function on_run_finished( EventRun $run ): void {
 		}
 	);
 
-	if ( ! $reserved ) {
+	if ( ! $stored || ! $reserved ) {
 		return;
 	}
 
@@ -284,7 +294,7 @@ function send_digest(): void {
 	$failures = array();
 
 	// Take the collected failures and empty the digest in one step.
-	with_state_lock(
+	$stored = with_state_lock(
 		static function ( array $state ) use ( &$failures ) {
 			$failures        = $state['digest'];
 			$state['digest'] = array();
@@ -292,7 +302,8 @@ function send_digest(): void {
 		}
 	);
 
-	if ( $failures ) {
+	// If emptying the digest wasn't stored, send nothing now rather than send the same failures twice.
+	if ( $stored && $failures ) {
 		send_failures( $failures, true );
 	}
 }

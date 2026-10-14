@@ -386,6 +386,17 @@ function can_run_event( $input ): bool {
 }
 
 /**
+ * Whether a hook is paused.
+ *
+ * @param string $hook The hook name.
+ */
+function is_hook_paused( string $hook ): bool {
+	$paused = get_option( \Crontrol\PAUSED_OPTION, array() );
+
+	return is_array( $paused ) && array_key_exists( $hook, $paused );
+}
+
+/**
  * Checks that a hook can be paused or resumed. Mirrors the Cron Events screen: WP Crontrol's own PHP
  * and URL hooks can't be paused, and only hooks that have scheduled events (or are already paused)
  * can be used, so an ability can't switch off an arbitrary action such as `init`.
@@ -638,6 +649,14 @@ function pause_hook( $input ) {
 		return $error;
 	}
 
+	// Already paused: nothing to do, which keeps the ability idempotent.
+	if ( is_hook_paused( $hook ) ) {
+		return array(
+			'hook'   => $hook,
+			'paused' => true,
+		);
+	}
+
 	$paused = Event\pause( $hook );
 
 	if ( is_wp_error( $paused ) ) {
@@ -663,6 +682,14 @@ function resume_hook( $input ) {
 
 	if ( $error ) {
 		return $error;
+	}
+
+	// Not paused: nothing to do, which keeps the ability idempotent.
+	if ( ! is_hook_paused( $hook ) ) {
+		return array(
+			'hook'   => $hook,
+			'paused' => false,
+		);
 	}
 
 	$resumed = Event\resume( $hook );
