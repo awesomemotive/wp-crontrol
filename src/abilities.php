@@ -395,7 +395,7 @@ function can_run_event( $input ): bool {
  */
 function check_pausable( string $hook, bool $resume ): ?WP_Error {
 	if ( in_array( $hook, array( PHPCronEvent::HOOK_NAME, URLCronEvent::HOOK_NAME ), true ) ) {
-		return new WP_Error( 'crontrol_hook_not_pausable', __( 'This hook can’t be paused or resumed.', 'wp-crontrol' ) );
+		return new WP_Error( 'crontrol_hook_not_pausable', __( 'This hook can’t be paused or resumed.', 'wp-crontrol' ), array( 'status' => 400 ) );
 	}
 
 	if ( $resume ) {
@@ -408,11 +408,11 @@ function check_pausable( string $hook, bool $resume ): ?WP_Error {
 
 	foreach ( Event\get() as $event ) {
 		if ( $event->hook === $hook ) {
-			return $event->pausable() ? null : new WP_Error( 'crontrol_hook_not_pausable', __( 'This hook can’t be paused or resumed.', 'wp-crontrol' ) );
+			return $event->pausable() ? null : new WP_Error( 'crontrol_hook_not_pausable', __( 'This hook can’t be paused or resumed.', 'wp-crontrol' ), array( 'status' => 400 ) );
 		}
 	}
 
-	return new WP_Error( 'crontrol_hook_not_found', __( 'There are no scheduled cron events with this hook name.', 'wp-crontrol' ) );
+	return new WP_Error( 'crontrol_hook_not_found', __( 'There are no scheduled cron events with this hook name.', 'wp-crontrol' ), array( 'status' => 404 ) );
 }
 
 /**
@@ -550,7 +550,7 @@ function get_event( $input ) {
 	$event = find_event( $input );
 
 	if ( ! $event ) {
-		return new WP_Error( 'crontrol_event_not_found', __( 'The cron event could not be found. It may have already run.', 'wp-crontrol' ) );
+		return new WP_Error( 'crontrol_event_not_found', __( 'The cron event could not be found. It may have already run.', 'wp-crontrol' ), array( 'status' => 404 ) );
 	}
 
 	return format_event( $event );
@@ -582,11 +582,11 @@ function run_event( $input ) {
 	$event = find_event( $input );
 
 	if ( ! $event ) {
-		return new WP_Error( 'crontrol_event_not_found', __( 'The cron event could not be found. It may have already run.', 'wp-crontrol' ) );
+		return new WP_Error( 'crontrol_event_not_found', __( 'The cron event could not be found. It may have already run.', 'wp-crontrol' ), array( 'status' => 404 ) );
 	}
 
 	if ( ! $event->runnable( new WordPressUserContext(), new WordPressFeatureContext() ) ) {
-		return new WP_Error( 'crontrol_event_not_runnable', __( 'This cron event can’t be run. It may be paused, or it may need to be checked and saved again on the Cron Events screen.', 'wp-crontrol' ) );
+		return new WP_Error( 'crontrol_event_not_runnable', __( 'This cron event can’t be run. It may be paused, or it may need to be checked and saved again on the Cron Events screen.', 'wp-crontrol' ), array( 'status' => 409 ) );
 	}
 
 	$ran = Event\run( $event->hook, $event->sig );
@@ -749,7 +749,7 @@ function list_logs( $input = array() ): array {
  * @return array<string,mixed>|WP_Error
  */
 function get_log( $input ) {
-	$not_found = new WP_Error( 'crontrol_log_not_found', __( 'The cron event log could not be found.', 'wp-crontrol' ) );
+	$not_found = new WP_Error( 'crontrol_log_not_found', __( 'The cron event log could not be found.', 'wp-crontrol' ), array( 'status' => 404 ) );
 
 	if ( ! logging_available() || ! \Crontrol\Pro\tables_ready() ) {
 		return $not_found;
@@ -845,11 +845,11 @@ function set_hook_logging( $input ) {
 	$enabled = (bool) $input['enabled'];
 
 	if ( ! logging_available() ) {
-		return new WP_Error( 'crontrol_logging_unavailable', __( 'Cron event logging isn’t available on this site right now.', 'wp-crontrol' ) );
+		return new WP_Error( 'crontrol_logging_unavailable', __( 'Cron event logging isn’t available on this site right now.', 'wp-crontrol' ), array( 'status' => 409 ) );
 	}
 
 	if ( in_array( $hook, \Crontrol\Pro\INTERNAL_HOOKS, true ) ) {
-		return new WP_Error( 'crontrol_hook_not_loggable', __( 'WP Crontrol’s own maintenance events can’t be logged.', 'wp-crontrol' ) );
+		return new WP_Error( 'crontrol_hook_not_loggable', __( 'WP Crontrol’s own maintenance events can’t be logged.', 'wp-crontrol' ), array( 'status' => 400 ) );
 	}
 
 	if ( $enabled ) {
