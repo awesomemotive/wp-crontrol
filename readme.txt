@@ -24,8 +24,10 @@ WP Crontrol is aware of timezones, will alert you to events that have no actions
 
 ### Usage
 
-1. Go to the `Tools → Cron Events` menu to manage cron events.
-2. Go to the `Settings → Cron Schedules` menu to manage cron schedules.
+1. Go to the `Cron → Cron Events` menu to manage cron events. `Tools → Cron Events` still works too.
+2. Go to the `Cron → Cron Logs` menu to see what ran, once you turn on logging for an event.
+3. Go to the `Cron → Cron Insights` menu to see how your events behaved over the last week.
+4. Go to the `Cron → Cron Schedules` menu to manage cron schedules.
 
 ### Documentation
 
@@ -64,7 +66,7 @@ WP Crontrol was built by John Blackbourn, who also maintains these plugins for d
 WP Crontrol is now looked after by the Duplicator team. If it's useful to you, these might be too:
 
 * [WPVibe](https://wordpress.org/plugins/vibe-ai/) connects AI assistants like Claude and ChatGPT to your WordPress site, so they can build and manage it for you.
-* [Duplicator](https://wordpress.org/plugins/duplicator/) backs up, migrates, and clones WordPress sites, including scheduled backups.
+* [Duplicator](https://wordpress.org/plugins/duplicator/) backs up, migrates, and clones WordPress sites.
 * [WP Mail SMTP](https://wordpress.org/plugins/wp-mail-smtp/) fixes WordPress email delivery, so the emails your scheduled tasks send actually arrive.
 * [WPCode](https://wordpress.org/plugins/insert-headers-and-footers/) adds custom code snippets to WordPress safely, without editing your theme's functions.php file.
 
@@ -158,7 +160,7 @@ There are two steps to getting a functioning cron event that executes regularly.
 
 *Step One: Adding the event*
 
-From the Tools → Cron Events menu, click on Add Cron Event. Fill out the details of the event. You're best off using a hook name that conforms to normal PHP variable naming conventions. The schedule is how often the event will be executed. If you don't see a good interval, then add one in the Settings → Cron Schedules menu.
+From the Tools → Cron Events menu, click on Add Cron Event. Fill out the details of the event. You're best off using a hook name that conforms to normal PHP variable naming conventions. The schedule is how often the event will be executed. If you don't see a good interval, then add one in the Cron → Cron Schedules menu.
 
 *Step Two: Writing the function*
 
@@ -184,7 +186,7 @@ From the Tools → Cron Events menu, click on Add Cron Event. Select the "URL cr
 
 ### How do I create a new PHP cron event?
 
-From the Tools → Cron Events menu, click on Add Cron Event. Select the "PHP cron event" option and enter the schedule and next run time. The event schedule is how often your event will be executed. If you don't see a good interval, then add one in the Settings → Cron Schedules menu. In the "PHP Code" area, enter the PHP code that should be run when your cron event is executed. You don't need to provide the PHP opening tag (`<?php`).
+From the Tools → Cron Events menu, click on Add Cron Event. Select the "PHP cron event" option and enter the schedule and next run time. The event schedule is how often your event will be executed. If you don't see a good interval, then add one in the Cron → Cron Schedules menu. In the "PHP Code" area, enter the PHP code that should be run when your cron event is executed. You don't need to provide the PHP opening tag (`<?php`).
 
 Creating, editing, and running PHP cron events is subject to restrictive security permissions. [You can read all about the features and security of PHP cron events on the WP Crontrol website](https://wp-crontrol.com/docs/php-cron-events/).
 
@@ -203,6 +205,12 @@ Therefore, the user access level required to execute arbitrary PHP code does not
 If the `CRONTROL_DISALLOW_PHP_EVENTS` constant is defined and set to `true`, then PHP cron events will be disabled completely. Any existing PHP cron events will remain in place (and can be deleted if user permissions allow) but their PHP code will not be executed when the event runs, and no PHP cron events can be added, edited, or run.
 
 [You can read all about the features and security of PHP cron events on the WP Crontrol website](https://wp-crontrol.com/docs/php-cron-events/).
+
+### Can I move WP Crontrol back under the Tools menu?
+
+Yes. WP Crontrol adds its own Cron menu, and Tools → Cron Events keeps working. To remove the Cron menu, add this to a must-use plugin or your theme's functions.php file:
+
+`add_filter( 'crontrol/top_level_menu', '__return_false' );`
 
 ### Are any WP-CLI commands available?
 
@@ -237,7 +245,7 @@ The photo was taken by <a href="https://www.flickr.com/photos/michaelpardo/21453
 * Dates and times in the event list can now be translated, including month names. Thanks to @zalemcitizen for the request.
 * Logs never store event arguments, and logged HTTP requests keep only the site address.
 * Logs are kept for 30 days, up to 10,000 entries per site. Deleting the plugin removes its log tables and settings.
-* Shows a one-time note about WP Crontrol's new home, which you can dismiss.
+* Shows a note about WP Crontrol's new home on the Cron Events screen until you dismiss it.
 
 ### 1.22.0 (8 October 2026) ###
 
