@@ -496,6 +496,26 @@ function format_event( Event\Event $event ): array {
 	$type    = event_type( $event );
 	$actions = array();
 
+	// A PHP or URL cron event whose stored data isn't the shape WP Crontrol saves is reported as an
+	// error, rather than letting it break the whole list.
+	$payload   = ( is_array( $event->args ) && is_array( $event->args[0] ?? null ) ) ? $event->args[0] : null;
+	$malformed = in_array( $type, array( 'php', 'url' ), true ) && null === $payload;
+
+	try {
+		$schedule       = $event->schedule ? $event->get_schedule_name() : null;
+		$schedule_error = false;
+	} catch ( \Throwable $e ) {
+		// The schedule's definition is gone, for example because the plugin that added it is inactive.
+		$schedule       = $event->schedule;
+		$schedule_error = true;
+	}
+
+	try {
+		$has_error = $malformed || $event->has_error();
+	} catch ( \Throwable $e ) {
+		$has_error = true;
+	}
+
 	foreach ( $event->get_callbacks() as $callback ) {
 		$actions[] = (string) ( $callback['callback']['name'] ?? '' );
 	}
@@ -507,21 +527,22 @@ function format_event( Event\Event $event ): array {
 		'label'         => event_label( $event, $type ),
 		'next_run_utc'  => gmdate( 'c', $event->timestamp ),
 		'next_run_site' => wp_date( 'c', $event->timestamp ),
-		'schedule'      => $event->schedule ? $event->get_schedule_name() : null,
+		'schedule'      => $schedule,
+		'schedule_missing' => $schedule_error,
 		'interval'      => $event->interval,
 		'recurring'     => $event->is_recurring(),
 		'paused'        => $event->is_paused(),
 		'late'          => $event->is_late(),
 		'has_action'    => ! empty( $actions ),
 		'actions'       => array_values( array_filter( $actions ) ),
-		'has_error'     => $event->has_error(),
+		'has_error'     => $has_error,
 		'logged'        => logging_available() && Log::is_hook_logged( $event->hook ),
 	);
 
 	if ( 'php' === $type ) {
 		$output['name'] = crontrol_event_name( $event );
 	} elseif ( 'url' === $type ) {
-		$args             = is_array( $event->args[0] ?? null ) ? $event->args[0] : array();
+		$args             = $payload ?? array();
 		$output['name']   = crontrol_event_name( $event );
 		$output['url']    = Log::redact_url( is_string( $args['url'] ?? null ) ? $args['url'] : '' );
 		$output['method'] = Event\url_method( $args['method'] ?? 'GET' );
@@ -631,7 +652,14 @@ function run_event( $input ) {
 		return new WP_Error( 'crontrol_event_not_found', __( 'The cron event could not be found. It may have already run.', 'wp-crontrol' ), array( 'status' => 404 ) );
 	}
 
-	if ( ! $event->runnable( new WordPressUserContext(), new WordPressFeatureContext() ) ) {
+	try {
+		$runnable = $event->runnable( new WordPressUserContext(), new WordPressFeatureContext() );
+	} catch ( \Throwable $e ) {
+		// The event's stored data isn't the shape WP Crontrol saves.
+		$runnable = false;
+	}
+
+	if ( ! $runnable ) {
 		return new WP_Error( 'crontrol_event_not_runnable', __( 'This cron event can’t be run. It may be paused, or it may need to be checked and saved again on the Cron Events screen.', 'wp-crontrol' ), array( 'status' => 409 ) );
 	}
 

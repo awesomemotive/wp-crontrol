@@ -354,6 +354,61 @@ final class AbilitiesTest extends Test {
 		self::assertSame( 'crontrol_ability_object_args', $result['events'][0]['label'] );
 	}
 
+	public function testMalformedEventsDoNotBreakTheList(): void {
+		$this->admin();
+
+		// An event whose schedule has since disappeared.
+		$add_schedule = static fn ( array $schedules ): array => $schedules + array(
+			'crontrol_gone' => array(
+				'interval' => 600,
+				'display'  => 'Gone',
+			),
+		);
+		add_filter( 'cron_schedules', $add_schedule );
+		wp_schedule_event( time() + HOUR_IN_SECONDS, 'crontrol_gone', 'crontrol_ability_gone_schedule' );
+		remove_filter( 'cron_schedules', $add_schedule );
+
+		// PHP and URL events whose stored arguments aren't arrays.
+		$malformed = array(
+			array( (object) array( 'code' => 'x' ) ),
+			array( 'not-an-array' ),
+		);
+
+		foreach ( $malformed as $args ) {
+			wp_schedule_single_event( time() + HOUR_IN_SECONDS + wp_rand( 1, 999 ), PHPCronEvent::HOOK_NAME, $args );
+			wp_schedule_single_event( time() + HOUR_IN_SECONDS + wp_rand( 1, 999 ), URLCronEvent::HOOK_NAME, $args );
+		}
+
+		$result = $this->ability( 'wp-crontrol/list-events' )->execute( array( 'per_page' => 200 ) );
+
+		wp_clear_scheduled_hook( 'crontrol_ability_gone_schedule' );
+		wp_clear_scheduled_hook( URLCronEvent::HOOK_NAME, array( (object) array( 'code' => 'x' ) ) );
+		wp_clear_scheduled_hook( URLCronEvent::HOOK_NAME, array( 'not-an-array' ) );
+
+		self::assertIsArray( $result );
+
+		$by_hook = array();
+		foreach ( $result['events'] as $event ) {
+			$by_hook[ $event['hook'] ][] = $event;
+		}
+
+		self::assertTrue( $by_hook['crontrol_ability_gone_schedule'][0]['schedule_missing'] );
+		self::assertCount( 2, $by_hook[ PHPCronEvent::HOOK_NAME ] );
+		self::assertCount( 2, $by_hook[ URLCronEvent::HOOK_NAME ] );
+
+		foreach ( array_merge( $by_hook[ PHPCronEvent::HOOK_NAME ], $by_hook[ URLCronEvent::HOOK_NAME ] ) as $event ) {
+			self::assertTrue( $event['has_error'] );
+
+			$run = $this->ability( 'wp-crontrol/run-event' )->execute(
+				array(
+					'hook' => $event['hook'],
+					'sig'  => $event['sig'],
+				)
+			);
+			self::assertWPError( $run );
+		}
+	}
+
 	public function testInsightsTotalsCoverEveryHook(): void {
 		$this->admin();
 		\Crontrol\Pro\init_db();
