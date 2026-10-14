@@ -2916,6 +2916,11 @@ function setup_manage_page() {
 function enqueue_assets( $hook_suffix ) {
 	$tab = get_tab_states();
 
+	// Only WP Crontrol's own screens get its styles and scripts; the CSS changes list tables.
+	if ( ! array_filter( $tab ) ) {
+		return;
+	}
+
 	$css_deps = [
 		'dashicons',
 	];
@@ -2936,26 +2941,24 @@ function enqueue_assets( $hook_suffix ) {
 
 	if ( $show_pointers['logs'] ) {
 		$vars['pointers']['logs'] = [
-			'title' => esc_js( __( 'Cron event logs', 'wp-crontrol' ) ),
+			'title' => esc_html__( 'Cron event logs', 'wp-crontrol' ),
 			'lines' => array(
-				esc_js( __( 'Cron events can now be logged each time they run, for free. Logging is off until you turn it on for an event.', 'wp-crontrol' ) ),
+				esc_html__( 'Cron events can now be logged each time they run, for free. Logging is off until you turn it on for an event.', 'wp-crontrol' ),
 				sprintf(
 					'<a href="%s">%s</a>',
-					'tools.php?page=wp-crontrol-logs',
-					esc_js( __( 'More information on the Cron Logs tab.', 'wp-crontrol' ) ),
+					esc_url( admin_url( 'tools.php?page=wp-crontrol-logs' ) ),
+					esc_html__( 'More information on the Cron Logs tab.', 'wp-crontrol' ),
 				),
 			),
 		];
 	}
 
-	if ( $hook_suffix !== 'plugins.php' ) {
-		wp_enqueue_style(
-			'wp-crontrol',
-			plugin_dir_url( PLUGIN_FILE ) . 'css/wp-crontrol.css',
-			$css_deps,
-			WP_CRONTROL_VERSION
-		);
-	}
+	wp_enqueue_style(
+		'wp-crontrol',
+		plugin_dir_url( PLUGIN_FILE ) . 'css/wp-crontrol.css',
+		$css_deps,
+		WP_CRONTROL_VERSION
+	);
 
 	wp_enqueue_script(
 		'wp-crontrol',

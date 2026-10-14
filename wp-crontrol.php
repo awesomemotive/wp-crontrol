@@ -35,9 +35,6 @@
 
 namespace Crontrol;
 
-const PLUGIN_FILE = __FILE__;
-const WP_CRONTROL_VERSION = '1.23.0-dev';
-
 if ( ! defined( 'ABSPATH' ) ) {
 	header( 'HTTP/1.1 403 Forbidden' );
 	exit;
@@ -47,6 +44,21 @@ if ( ! defined( 'ABSPATH' ) ) {
 if ( ! version_compare( PHP_VERSION, '7.4', '>=' ) ) {
 	return;
 }
+
+// The old WP Crontrol Pro plugin can't run alongside WP Crontrol, which now includes its features.
+// If it's active, it's deactivated and WP Crontrol starts on the next request.
+require_once __DIR__ . '/src/retire-pro.php';
+
+if ( retired_pro_is_active() ) {
+	retire_pro();
+	return;
+}
+
+add_action( 'admin_notices', __NAMESPACE__ . '\show_retired_pro_notice' );
+add_action( 'network_admin_notices', __NAMESPACE__ . '\show_retired_pro_notice' );
+
+const PLUGIN_FILE = __FILE__;
+const WP_CRONTROL_VERSION = '1.23.0-dev';
 
 if ( ! file_exists( __DIR__ . '/vendor/autoload.php' ) ) {
 	return;
