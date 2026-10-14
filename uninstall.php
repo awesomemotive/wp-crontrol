@@ -30,7 +30,7 @@ if ( ! function_exists( 'crontrol_uninstall_pro_in_use' ) ) {
 		}
 
 		// Every network, not just this one: the tables are shared by all of them.
-		foreach ( get_networks( array(
+		foreach ( (array) get_networks( array(
 			'fields' => 'ids',
 			'number' => 0,
 		) ) as $network_id ) {
@@ -95,7 +95,7 @@ $crontrol_network_options = array(
 );
 
 $crontrol_network_ids = is_multisite()
-	? get_networks(
+	? (array) get_networks(
 		array(
 			'fields' => 'ids',
 			'number' => 0,
