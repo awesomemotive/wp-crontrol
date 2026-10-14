@@ -279,7 +279,10 @@ final class AlertsTest extends Test {
 		$run->status      = EventRun::STATUS_ERRORED;
 		$run->mail_failed = 1;
 		$notes            = new \ReflectionMethod( \Crontrol\Pro\Logs\Table::class, 'run_details_notes' );
-		$notes->setAccessible( true );
+		if ( PHP_VERSION_ID < 80100 ) {
+			// Only needed before PHP 8.1, and deprecated from PHP 8.5.
+			$notes->setAccessible( true );
+		}
 		$table = new \Crontrol\Pro\Logs\Table();
 		$html .= (string) $notes->invoke( $table, $run );
 
