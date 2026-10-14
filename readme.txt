@@ -61,7 +61,7 @@ WP Crontrol was built by John Blackbourn, who also maintains these plugins for d
 
 ### More Plugins From Our Team
 
-WP Crontrol is now looked after by the team at Awesome Motive. If it's useful to you, these might be too:
+WP Crontrol is now looked after by the Duplicator team. If it's useful to you, these might be too:
 
 * [WPVibe](https://wordpress.org/plugins/vibe-ai/) connects AI assistants like Claude and ChatGPT to your WordPress site, so they can build and manage it for you.
 * [Duplicator](https://wordpress.org/plugins/duplicator/) backs up, migrates, and clones WordPress sites, including scheduled backups.
