@@ -667,7 +667,7 @@ function admin_alerts_page(): void {
 				$card = \Crontrol\Promos\featured_card(
 					'wp-mail-smtp',
 					$smtp,
-					__( 'Make sure alerts arrive', 'wp-crontrol' ),
+					__( 'Make sure alert emails get delivered', 'wp-crontrol' ),
 					__( 'WordPress sends email through your host, and many hosts don’t deliver it reliably, so alerts can end up in spam or never arrive. WP Mail SMTP sends WordPress email through a real mail provider such as Gmail, Outlook, or SendGrid.', 'wp-crontrol' )
 				);
 				echo $card; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Escaped in featured_card().

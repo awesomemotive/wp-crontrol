@@ -234,15 +234,41 @@ input[type="time"][step="1"] {
 	flex: none;
 }
 
-.crontrol-promo-notice .crontrol-promo-icon,
-.crontrol-promo-tip .crontrol-promo-icon {
-	margin-right: 6px;
-	vertical-align: middle;
+/* Logo on the left, text in its own column on the right, like a WordPress admin notice. */
+.crontrol-promo-media {
+	align-items: flex-start;
+	display: flex;
+	gap: 12px;
 }
 
-.crontrol-promo-notice .button,
-.crontrol-promo-tip .button {
-	margin-left: 4px;
+.crontrol-promo-notice.crontrol-promo-media {
+	padding-bottom: 8px;
+	padding-top: 8px;
+}
+
+.crontrol-promo-tip.crontrol-promo-media {
+	margin: 8px 0;
+	max-width: 760px;
+}
+
+.crontrol-promo-media .crontrol-promo-body {
+	flex: 1;
+	min-width: 0;
+}
+
+.crontrol-promo-media .crontrol-promo-body p {
+	margin: 0 0 6px;
+}
+
+.crontrol-promo-media .crontrol-promo-body p:last-child {
+	margin-bottom: 0;
+}
+
+.crontrol-promo-media .crontrol-promo-icon {
+	margin-top: 2px;
+}
+
+.crontrol-promo-media .button {
 	vertical-align: middle;
 }
 

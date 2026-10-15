@@ -579,8 +579,8 @@ function show_backup_notice( $tab ): void {
 	}
 
 	printf(
-		'<div class="notice notice-info inline crontrol-promo-notice" data-crontrol-promo="no-backup"><p>%1$s<strong>%2$s</strong> %3$s %4$s <a class="crontrol-promo-dismiss" href="%5$s">%6$s</a></p></div>',
-		icon( 'duplicator', 20 ), // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		'<div class="notice notice-info inline crontrol-promo-notice crontrol-promo-media" data-crontrol-promo="no-backup">%1$s<div class="crontrol-promo-body"><p><strong>%2$s</strong> %3$s</p><p>%4$s <a class="crontrol-promo-dismiss" href="%5$s">%6$s</a></p></div></div>',
+		icon( 'duplicator', 40 ), // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 		esc_html__( 'No scheduled backups found on this site.', 'wp-crontrol' ),
 		esc_html__( 'Unless your host backs it up for you, take a backup with Duplicator before something goes wrong.', 'wp-crontrol' ),
 		plugin_button( 'duplicator', $plugin, 'button button-small' ), // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
@@ -611,8 +611,8 @@ function show_wpcode_tip(): void {
 	}
 
 	printf(
-		'<p class="crontrol-promo-tip" data-crontrol-promo="wpcode-tip">%1$s%2$s %3$s <a class="crontrol-promo-dismiss" href="%4$s">%5$s</a></p>',
-		icon( 'insert-headers-and-footers', 20 ), // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		'<div class="crontrol-promo-tip crontrol-promo-media" data-crontrol-promo="wpcode-tip">%1$s<div class="crontrol-promo-body"><p>%2$s</p><p>%3$s <a class="crontrol-promo-dismiss" href="%4$s">%5$s</a></p></div></div>',
+		icon( 'insert-headers-and-footers', 32 ), // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 		esc_html__( 'Want this code to run on every page instead of on a schedule? WPCode keeps PHP snippets you can switch on and off.', 'wp-crontrol' ),
 		plugin_button( 'insert-headers-and-footers', $plugin, 'button button-small' ), // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 		esc_url( dismiss_url( 'wpcode-tip' ) ),
