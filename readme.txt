@@ -3,7 +3,7 @@
 Contributors: johnbillion, scompt, smub, seedprod
 Tags: cron, wp-cron, crontrol, debug, woocommerce
 Tested up to: 7.1
-Stable tag: 2.0.0-dev
+Stable tag: 2.0.0
 License: GPL v2 or later
 
 Take control of the cron events on your WordPress website or WooCommerce store with WP Crontrol.
@@ -244,7 +244,7 @@ The photo was taken by <a href="https://www.flickr.com/photos/michaelpardo/21453
 
 ## Changelog ##
 
-### 2.0.0 (draft, not released) ###
+### 2.0.0 (15 October 2026) ###
 
 * Cron event logging and Cron Insights, previously part of WP Crontrol Pro, are now free for everyone. Logging is off until you turn it on for an event.
 * WP Crontrol now has its own Cron menu in the admin, with Events, Logs, Insights, Alerts, AI, and Schedules in one place. Tools > Cron Events still works.

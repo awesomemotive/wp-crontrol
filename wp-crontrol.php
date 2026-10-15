@@ -5,7 +5,7 @@
  * Description:  Take control of the cron events on your WordPress website or WooCommerce store.
  * Author:       Duplicator
  * Author URI:   https://duplicator.com
- * Version:      2.0.0-dev
+ * Version:      2.0.0
  * Text Domain:  wp-crontrol
  * Domain Path:  /languages/
  * Requires at least: 6.6
@@ -64,7 +64,7 @@ add_action( 'admin_notices', __NAMESPACE__ . '\show_retired_pro_notice' );
 add_action( 'network_admin_notices', __NAMESPACE__ . '\show_retired_pro_notice' );
 
 const PLUGIN_FILE = __FILE__;
-const WP_CRONTROL_VERSION = '2.0.0-dev';
+const WP_CRONTROL_VERSION = '2.0.0';
 
 if ( ! file_exists( __DIR__ . '/vendor/autoload.php' ) ) {
 	return;
