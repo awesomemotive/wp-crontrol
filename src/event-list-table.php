@@ -8,7 +8,6 @@ namespace Crontrol\Event;
 use Crontrol\Context\UserContext;
 use Crontrol\Context\FeatureContext;
 use Crontrol\Exception\UnknownScheduleException;
-use DateTimeImmutable;
 
 require_once ABSPATH . 'wp-admin/includes/class-wp-list-table.php';
 
@@ -239,19 +238,17 @@ class Table extends \WP_List_Table {
 	 */
 	#[\Override]
 	public function get_columns() {
-		return array(
+		$cols = array(
 			'cb'                  => '<input type="checkbox" />',
 			'crontrol_hook'       => esc_html__( 'Hook', 'wp-crontrol' ),
-			'crontrol_next'       => esc_html(
-				sprintf(
-					/* translators: %s: UTC offset */
-					__( 'Next Run (%s)', 'wp-crontrol' ),
-					\Crontrol\get_timezone_location()
-				),
-			),
+			'crontrol_next'       => esc_html__( 'Next Run', 'wp-crontrol' ),
 			'crontrol_schedule'   => esc_html_x( 'Schedule', 'noun', 'wp-crontrol' ),
 			'crontrol_actions'    => esc_html__( 'Action', 'wp-crontrol' ),
 		);
+
+		$cols = apply_filters( 'crontrol/event_table_columns', $cols );
+
+		return $cols;
 	}
 
 	/**
@@ -639,6 +636,28 @@ class Table extends \WP_List_Table {
 	}
 
 	/**
+	 * Returns the output for a custom column added via the `crontrol/event_table_columns` filter.
+	 *
+	 * @param Event  $event       The cron event for the current row.
+	 * @param string $column_name The name of the column being rendered.
+	 * @return string The cell output.
+	 */
+	#[\Override]
+	protected function column_default( $event, $column_name ) {
+		/**
+		 * Filters the output for a custom column on the cron event list table.
+		 *
+		 * This allows the content of columns added via the `crontrol/event_table_columns`
+		 * filter to be populated. The dynamic portion of the hook name, `$column_name`,
+		 * refers to the name of the column being rendered.
+		 *
+		 * @param string $output The column output. Default empty string.
+		 * @param Event  $event  The cron event for the current row.
+		 */
+		return (string) apply_filters( "crontrol/event_table_column_output_{$column_name}", '', $event );
+	}
+
+	/**
 	 * Returns the output for the hook name cell of a table row.
 	 *
 	 * @param Event $event The cron event for the current row.
@@ -766,55 +785,7 @@ class Table extends \WP_List_Table {
 			);
 		}
 
-		$time_format = 'g:i a';
-
-		$event_datetime_utc = $event->get_next_run_utc( 'Y-m-d H:i:s' );
-
-		$timezone_local  = wp_timezone();
-		$event_local     = get_date_from_gmt( $event_datetime_utc, 'Y-m-d' );
-		$today_local     = ( new DateTimeImmutable( 'now', $timezone_local ) )->format( 'Y-m-d' );
-		$tomorrow_local  = ( new DateTimeImmutable( 'tomorrow', $timezone_local ) )->format( 'Y-m-d' );
-		$yesterday_local = ( new DateTimeImmutable( 'yesterday', $timezone_local ) )->format( 'Y-m-d' );
-
-		// If the offset of the date of the event is different from the offset of the site, add a marker.
-		if ( get_date_from_gmt( $event_datetime_utc, 'P' ) !== get_date_from_gmt( 'now', 'P' ) ) {
-			$time_format .= ' (P)';
-		}
-
-		$event_time_local = get_date_from_gmt( $event_datetime_utc, $time_format );
-
-		if ( $event_local === $today_local ) {
-			$date = sprintf(
-				/* translators: %s: Time */
-				__( 'Today at %s', 'wp-crontrol' ),
-				$event_time_local,
-			);
-		} elseif ( $event_local === $tomorrow_local ) {
-			$date = sprintf(
-				/* translators: %s: Time */
-				__( 'Tomorrow at %s', 'wp-crontrol' ),
-				$event_time_local,
-			);
-		} elseif ( $event_local === $yesterday_local ) {
-			$date = sprintf(
-				/* translators: %s: Time */
-				__( 'Yesterday at %s', 'wp-crontrol' ),
-				$event_time_local,
-			);
-		} else {
-			$date = sprintf(
-				/* translators: 1: Date, 2: Time */
-				__( '%1$s at %2$s', 'wp-crontrol' ),
-				get_date_from_gmt( $event_datetime_utc, 'F jS' ),
-				$event_time_local,
-			);
-		}
-
-		$time = sprintf(
-			'<time datetime="%1$s">%2$s</time>',
-			esc_attr( $event->get_next_run_utc() ),
-			esc_html( $date )
-		);
+		$time = \Crontrol\time_element( $event->timestamp );
 
 		$until = $event->timestamp - time();
 		$late  = $event->is_late();

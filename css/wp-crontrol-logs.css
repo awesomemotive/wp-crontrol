@@ -1,0 +1,335 @@
+.wp-list-table.wp-list-table tbody {
+	/* Override WordPress default striping for our table to handle error message rows properly */
+	tr {
+		background-color: #ffffff;
+	}
+
+	tr.alternate {
+		background-color: #f9f9f9;
+	}
+
+	/* Error message rows */
+	tr.crontrol-errored,
+	tr.crontrol-error-message {
+		background-color: #ffe8e8;
+	}
+
+	/* Striping for error message rows */
+	tr.crontrol-errored.alternate,
+	tr.crontrol-error-message.alternate {
+		background-color: hsl(from #ffe8e8 h s calc(l - 2));
+	}
+
+	/* Warning rows */
+	tr.crontrol-warning-message {
+		background-color: #fcf3e3;
+	}
+
+	/* Striping for warning rows */
+	tr.crontrol-warning-message.alternate {
+		background-color: hsl(from #fcf3e3 h s calc(l - 2));
+	}
+
+	tr.crontrol-supplemental-row td {
+		padding-top: 0 !important;
+		border-top: none !important;
+	}
+
+	tr.no-items td {
+		padding: 50px 10px;
+		text-align: center;
+	}
+}
+
+.wp-list-table.wp-list-table thead th.column-crontrol_https,
+.wp-list-table.wp-list-table tbody td.column-crontrol_https,
+.wp-list-table.wp-list-table thead th.column-crontrol_emails,
+.wp-list-table.wp-list-table tbody td.column-crontrol_emails,
+.wp-list-table.wp-list-table thead th.column-crontrol_db_queries,
+.wp-list-table.wp-list-table tbody td.column-crontrol_db_queries,
+.wp-list-table.wp-list-table thead th.column-crontrol_duration,
+.wp-list-table.wp-list-table tbody td.column-crontrol_duration {
+	text-align: end;
+	width: 1em;
+	white-space: nowrap;
+}
+
+.wp-list-table.wp-list-table thead th.column-crontrol_view,
+.wp-list-table.wp-list-table tbody td.column-crontrol_view {
+	white-space: nowrap;
+}
+
+/* Run details dialog */
+.crontrol-run-dialog {
+	width: min( 700px, 90vw );
+	max-height: 85vh;
+	padding: 0;
+	border: 1px solid #c3c4c7;
+	box-shadow: 0 4px 24px rgba( 0, 0, 0, 0.2 );
+}
+
+.crontrol-run-dialog::backdrop {
+	background-color: rgba( 0, 0, 0, 0.6 );
+}
+
+.crontrol-run-dialog form {
+	display: flex;
+	flex-direction: column;
+	max-height: 85vh;
+}
+
+.crontrol-run-dialog-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	padding: 12px 20px;
+	border-bottom: 1px solid #dcdcde;
+}
+
+.crontrol-run-dialog-header h2 {
+	margin: 0;
+	font-size: 1.2em;
+}
+
+.crontrol-run-dialog-close {
+	flex: none;
+	font-size: 24px;
+	line-height: 1;
+	text-decoration: none;
+	color: #646970;
+	cursor: pointer;
+}
+
+.crontrol-run-dialog-close:hover {
+	color: #135e96;
+}
+
+.crontrol-run-dialog-body {
+	padding: 16px 20px;
+	overflow-y: auto;
+}
+
+.crontrol-run-dialog-metrics {
+	display: grid;
+	grid-template-columns: repeat( auto-fit, minmax( 90px, 1fr ) );
+	gap: 10px;
+	margin-top: 16px;
+}
+
+.crontrol-run-metric {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	padding: 10px 12px;
+	background-color: #f6f7f7;
+	border: 1px solid #dcdcde;
+	text-align: start;
+}
+
+.crontrol-run-metric-value {
+	font-size: 1.25em;
+	font-weight: 600;
+	line-height: 1.2;
+	color: #1d2327;
+}
+
+.crontrol-run-metric-label {
+	font-size: 12px;
+	color: #1d2327;
+}
+
+.crontrol-run-dialog-details {
+	margin: 0;
+	display: grid;
+	grid-template-columns: max-content 1fr;
+	gap: 8px 20px;
+}
+
+.crontrol-run-dialog-details dt {
+	font-weight: 600;
+	color: #1d2327;
+	text-align: start;
+}
+
+.crontrol-run-dialog-details dd {
+	margin: 0;
+	overflow-wrap: anywhere;
+	text-align: start;
+}
+
+.crontrol-run-dialog-details pre {
+	margin: 0;
+	padding: 8px;
+	background-color: #f6f7f7;
+	overflow-x: auto;
+	white-space: pre-wrap;
+}
+
+.crontrol-run-dialog-list {
+	margin-top: 16px;
+}
+
+.crontrol-run-dialog-list h3 {
+	margin: 0 0 8px;
+	font-size: 1em;
+	text-align: start;
+}
+
+.crontrol-run-dialog-list ul {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+	border: 1px solid #dcdcde;
+}
+
+.crontrol-run-dialog-list li {
+	margin: 0;
+	padding: 8px 12px;
+	font-family: Consolas, Monaco, monospace;
+	font-size: 12px;
+	text-align: start;
+	white-space: normal;
+	overflow-wrap: anywhere;
+	word-break: break-word;
+}
+
+.crontrol-run-dialog-list-item {
+	display: grid;
+	grid-template-columns: 110px 1fr;
+	gap: 12px;
+	align-items: start;
+}
+
+.crontrol-run-dialog-list-level {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	font-family: inherit;
+	font-weight: 600;
+}
+
+.crontrol-run-dialog-list-level .dashicons {
+	width: 16px;
+	height: 16px;
+	font-size: 16px;
+	flex-shrink: 0;
+}
+
+.crontrol-run-dialog-list-message {
+	min-width: 0;
+}
+
+.crontrol-run-dialog-list li + li {
+	border-top: 1px solid #f0f0f1;
+}
+
+.crontrol-run-dialog-list-empty {
+	font-family: inherit;
+	color: #646970;
+}
+
+/* Colour code each entry's level indicator by severity. */
+.crontrol-level-emergency .crontrol-run-dialog-list-level,
+.crontrol-level-alert .crontrol-run-dialog-list-level,
+.crontrol-level-critical .crontrol-run-dialog-list-level,
+.crontrol-level-error .crontrol-run-dialog-list-level {
+	color: #d63638;
+}
+
+.crontrol-level-warning .crontrol-run-dialog-list-level {
+	color: #bd8600;
+}
+
+.crontrol-level-debug .crontrol-run-dialog-list-level,
+.crontrol-level-notice .crontrol-run-dialog-list-level,
+.crontrol-level-info .crontrol-run-dialog-list-level {
+	color: #2271b1;
+}
+
+.crontrol-run-dialog-list-errors ul {
+	border-color: #d63638;
+}
+
+.crontrol-run-dialog-list-logs:has( .crontrol-run-dialog-list-empty ) ul,
+.crontrol-run-dialog-list-errors:has( .crontrol-run-dialog-list-empty ) ul {
+	border: none;
+}
+
+.crontrol-run-dialog-list-errors li.crontrol-run-dialog-list-empty {
+	color: #646970;
+}
+
+.crontrol-status-completed {
+	color: #080;
+}
+
+/* Rotating animation for running status icons */
+.crontrol-rotating {
+	animation: spin 2s linear infinite;
+}
+
+@keyframes spin {
+	0% { transform: rotate(0deg); }
+	100% { transform: rotate(360deg); }
+}
+
+/* Logging settings panel beneath the Cron Logs table */
+.crontrol-logging-settings {
+	margin-top: 20px;
+	padding: 1px 20px 10px;
+	background-color: #ffffff;
+	border: 1px solid #c3c4c7;
+	box-shadow: 0 1px 1px rgba( 0, 0, 0, 0.04 );
+}
+
+.crontrol-logging-settings fieldset {
+	display: grid;
+	grid-template-columns: repeat( auto-fill, minmax( 280px, 1fr ) );
+	gap: 4px 20px;
+}
+
+.crontrol-logging-divider {
+	grid-column: 1 / -1;
+	margin: 6px 0;
+}
+
+.crontrol-logging-settings fieldset label {
+	display: grid;
+	grid-template-columns: auto 1fr;
+	column-gap: 6px;
+	align-items: flex-start;
+	cursor: pointer;
+
+	&:hover {
+		background-color: #eee;
+	}
+}
+
+.crontrol-logging-settings fieldset label input {
+	grid-row: 1 / span 2;
+	margin-top: 2px;
+}
+
+.crontrol-logging-hook-name,
+.crontrol-logging-hook-schedule {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.crontrol-logging-hook-schedule {
+	color: #646970;
+	font-size: 12px;
+}
+
+.crontrol-run-dialog-notes {
+	background: #fcf9e8;
+	border-left: 4px solid #dba617;
+	margin: 12px 0;
+	padding: 2px 12px;
+}
+
+.crontrol-ask-ai {
+	font-size: 12px;
+}

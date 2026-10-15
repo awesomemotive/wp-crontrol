@@ -23,7 +23,8 @@ test.describe( 'Adding Cron Schedules', () => {
 		await Crontrol.amOnCronScheduleListingPage();
 		await expect( page.locator( '#crontrol-header' ) ).toContainText( 'Cron Schedules' );
 		await expect( page.locator( 'h1' ) ).toContainText( 'Cron Schedules' );
-		await expect( page.locator( 'h2' ) ).toContainText( 'Add Cron Schedule' );
+		// Other notices on the screen can have their own h2, so target the form's heading.
+		await expect( page.getByRole( 'heading', { level: 2, name: 'Add Cron Schedule' } ) ).toBeVisible();
 	} );
 
 	test( 'Adding a new schedule', {

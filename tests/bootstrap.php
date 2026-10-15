@@ -10,3 +10,7 @@ tests_add_filter( 'muplugins_loaded', fn() => require_once dirname( __DIR__ ) . 
 
 // Start up the WP testing environment
 require_once $_tests_dir . 'includes/bootstrap.php';
+
+// The log tables are only created once logging is turned on. Create them up front for the
+// logging tests, outside any test transaction, because table creation commits implicitly.
+\Crontrol\Pro\init_db();

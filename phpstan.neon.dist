@@ -16,6 +16,7 @@ parameters:
 			- vendor/yoast/wp-test-utils/src/BrainMonkey/bootstrap.php
 	bootstrapFiles:
 		- tests/phpstan/stubs.php
+		- tests/phpstan/wp-cli.php
 	dynamicConstantNames:
 		- CRONTROL_DISALLOW_PHP_EVENTS
 		- CRONTROL_DISALLOW_URL_EVENTS
@@ -26,3 +27,9 @@ parameters:
 	ignoreErrors:
 		-
 			message: '#^Call to function method_exists\(\) with ''\\\\QM_Util'' and ''populate_callback'' will always evaluate to true\.$#'
+		-
+			# The abilities tests skip themselves on WordPress versions without the Abilities API.
+			identifiers:
+				- WPCompat.functionNotAvailable
+				- WPCompat.methodNotAvailable
+			path: tests/integration/AbilitiesTest.php

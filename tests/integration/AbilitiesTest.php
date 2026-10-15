@@ -1,0 +1,473 @@
+<?php declare(strict_types = 1);
+
+namespace Crontrol\Tests;
+
+use Crontrol\Event\PHPCronEvent;
+use Crontrol\Event\URLCronEvent;
+use Crontrol\Pro\Log;
+use WP_Ability;
+use WP_Error;
+
+/**
+ * The abilities must follow the same permission rules as WP Crontrol's admin screens.
+ */
+final class AbilitiesTest extends Test {
+	private const HOOK = 'crontrol_ability_test_hook';
+
+	#[\Override]
+	public function set_up() {
+		parent::set_up();
+
+		if ( ! function_exists( 'wp_get_ability' ) ) {
+			$this->markTestSkipped( 'The Abilities API needs WordPress 6.9 or later.' );
+		}
+
+		wp_clear_scheduled_hook( self::HOOK );
+		wp_schedule_event( time() + HOUR_IN_SECONDS, 'hourly', self::HOOK, array( 'one' ) );
+		delete_option( \Crontrol\PAUSED_OPTION );
+		delete_option( 'crontrol_log' );
+	}
+
+	#[\Override]
+	public function tear_down() {
+		wp_clear_scheduled_hook( self::HOOK );
+		wp_clear_scheduled_hook( PHPCronEvent::HOOK_NAME );
+		delete_option( \Crontrol\PAUSED_OPTION );
+		delete_option( 'crontrol_log' );
+		remove_all_filters( 'user_has_cap' );
+		remove_all_filters( 'map_meta_cap' );
+
+		parent::tear_down();
+	}
+
+	private function ability( string $name ): WP_Ability {
+		$ability = wp_get_ability( $name );
+		self::assertInstanceOf( WP_Ability::class, $ability, $name );
+
+		return $ability;
+	}
+
+	private function admin(): void {
+		$user = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		self::assertIsInt( $user );
+
+		if ( is_multisite() ) {
+			grant_super_admin( $user );
+		}
+
+		wp_set_current_user( $user );
+	}
+
+	private function without_cap( string $cap ): void {
+		add_filter(
+			'user_has_cap',
+			static function ( array $allcaps ) use ( $cap ): array {
+				$allcaps[ $cap ] = false;
+				return $allcaps;
+			}
+		);
+
+		// Super admins on multisite skip user_has_cap, so deny the capability outright.
+		add_filter(
+			'map_meta_cap',
+			static function ( array $caps, string $requested ) use ( $cap ): array {
+				return $requested === $cap ? array( 'do_not_allow' ) : $caps;
+			},
+			10,
+			2
+		);
+	}
+
+	private function php_event(): string {
+		$code = 'error_log( "ability test" );';
+		$args = array(
+			array(
+				'code' => $code,
+				'name' => 'Ability test',
+				'hash' => wp_hash( $code ),
+			),
+		);
+		wp_schedule_single_event( time() + HOUR_IN_SECONDS, PHPCronEvent::HOOK_NAME, $args );
+
+		return md5( serialize( $args ) );
+	}
+
+	public function testAbilitiesAreRegistered(): void {
+		foreach ( array_keys( \Crontrol\Abilities\get_definitions() ) as $name ) {
+			$this->ability( $name );
+		}
+	}
+
+	public function testSubscriberCanUseNoAbilities(): void {
+		$user = self::factory()->user->create( array( 'role' => 'subscriber' ) );
+		self::assertIsInt( $user );
+		wp_set_current_user( $user );
+
+		$inputs = array(
+			'wp-crontrol/list-events'      => array(),
+			'wp-crontrol/list-schedules'   => array(),
+			'wp-crontrol/list-logs'        => array(),
+			'wp-crontrol/get-insights'     => array(),
+			'wp-crontrol/get-log'          => array( 'id' => 1 ),
+			'wp-crontrol/get-event'        => array( 'hook' => self::HOOK, 'sig' => md5( serialize( array( 'one' ) ) ) ),
+			'wp-crontrol/run-event'        => array( 'hook' => self::HOOK, 'sig' => md5( serialize( array( 'one' ) ) ) ),
+			'wp-crontrol/pause-hook'       => array( 'hook' => self::HOOK ),
+			'wp-crontrol/resume-hook'      => array( 'hook' => self::HOOK ),
+			'wp-crontrol/set-hook-logging' => array( 'hook' => self::HOOK, 'enabled' => true ),
+		);
+
+		foreach ( $inputs as $name => $input ) {
+			$result = $this->ability( $name )->execute( $input );
+			self::assertWPError( $result, $name );
+		}
+
+		self::assertSame( array(), Log::get_enabled_hooks() );
+		self::assertFalse( get_option( \Crontrol\PAUSED_OPTION, false ) );
+	}
+
+	public function testListEventsNeverIncludesPHPCode(): void {
+		$this->admin();
+		$this->php_event();
+
+		$result = $this->ability( 'wp-crontrol/list-events' )->execute( array( 'type' => 'php' ) );
+
+		self::assertIsArray( $result );
+		self::assertSame( 1, $result['total'] );
+		$encoded = (string) wp_json_encode( $result );
+		self::assertStringNotContainsString( 'error_log', $encoded );
+		self::assertStringNotContainsString( wp_hash( 'error_log( "ability test" );' ), $encoded );
+		self::assertSame( 'Ability test', $result['events'][0]['name'] );
+	}
+
+	/**
+	 * Unnamed PHP and URL events must not leak their code or full URL through the label.
+	 */
+	public function testUnnamedEventsLeakNoCodeOrURLs(): void {
+		$this->admin();
+
+		$code = '$secret_token = "abc123"; error_log( $secret_token );';
+		wp_schedule_single_event(
+			time() + HOUR_IN_SECONDS,
+			PHPCronEvent::HOOK_NAME,
+			array(
+				array(
+					'code' => $code,
+					'name' => '',
+					'hash' => wp_hash( $code ),
+				),
+			)
+		);
+
+		$url = 'https://example.com/hook?key=supersecretkey';
+		wp_schedule_single_event(
+			time() + HOUR_IN_SECONDS,
+			URLCronEvent::HOOK_NAME,
+			array(
+				array(
+					'url'    => $url,
+					'method' => 'GET',
+					'name'   => '',
+					'hash'   => \Crontrol\Event\url_hash( $url ),
+				),
+			)
+		);
+
+		$list = $this->ability( 'wp-crontrol/list-events' )->execute( array( 'search' => 'crontrol_' ) );
+		self::assertIsArray( $list );
+		$encoded = (string) wp_json_encode( $list );
+
+		self::assertStringNotContainsString( 'secret_token', $encoded );
+		self::assertStringNotContainsString( 'abc123', $encoded );
+		self::assertStringNotContainsString( 'supersecretkey', $encoded );
+		self::assertStringNotContainsString( '/hook', $encoded );
+
+		foreach ( $list['events'] as $event ) {
+			$single = $this->ability( 'wp-crontrol/get-event' )->execute(
+				array(
+					'hook' => $event['hook'],
+					'sig'  => $event['sig'],
+				)
+			);
+			$encoded = (string) wp_json_encode( $single );
+			self::assertStringNotContainsString( 'abc123', $encoded );
+			self::assertStringNotContainsString( 'supersecretkey', $encoded );
+		}
+
+		wp_clear_scheduled_hook( URLCronEvent::HOOK_NAME );
+	}
+
+	public function testRunningPHPEventsNeedsEditFiles(): void {
+		$this->admin();
+		$sig = $this->php_event();
+		$this->without_cap( 'edit_files' );
+
+		$result = $this->ability( 'wp-crontrol/run-event' )->check_permissions(
+			array(
+				'hook' => PHPCronEvent::HOOK_NAME,
+				'sig'  => $sig,
+			)
+		);
+
+		self::assertFalse( $result );
+	}
+
+	public function testRunningEventsWithFailedIntegrityIsRefused(): void {
+		$this->admin();
+
+		$code = 'error_log( "tampered" );';
+		$args = array(
+			array(
+				'code' => $code,
+				'name' => '',
+				// A hash for a URL event can never validate PHP code.
+				'hash' => \Crontrol\Event\url_hash( $code ),
+			),
+		);
+		wp_schedule_single_event( time() + HOUR_IN_SECONDS, PHPCronEvent::HOOK_NAME, $args );
+
+		$result = $this->ability( 'wp-crontrol/run-event' )->execute(
+			array(
+				'hook' => PHPCronEvent::HOOK_NAME,
+				'sig'  => md5( serialize( $args ) ),
+			)
+		);
+
+		self::assertInstanceOf( WP_Error::class, $result );
+		self::assertSame( 'crontrol_event_not_runnable', $result->get_error_code() );
+	}
+
+	public function testCrontrolHooksCannotBePaused(): void {
+		$this->admin();
+
+		foreach ( array( PHPCronEvent::HOOK_NAME, URLCronEvent::HOOK_NAME ) as $hook ) {
+			$result = $this->ability( 'wp-crontrol/pause-hook' )->execute( array( 'hook' => $hook ) );
+			self::assertWPError( $result, $hook );
+		}
+	}
+
+	public function testArbitraryActionsCannotBePaused(): void {
+		$this->admin();
+
+		$result = $this->ability( 'wp-crontrol/pause-hook' )->execute( array( 'hook' => 'init' ) );
+
+		self::assertWPError( $result );
+		self::assertFalse( get_option( \Crontrol\PAUSED_OPTION, false ) );
+	}
+
+	public function testPauseAndResumeAScheduledHook(): void {
+		$this->admin();
+
+		$paused = $this->ability( 'wp-crontrol/pause-hook' )->execute( array( 'hook' => self::HOOK ) );
+		self::assertIsArray( $paused );
+		self::assertArrayHasKey( self::HOOK, (array) get_option( \Crontrol\PAUSED_OPTION ) );
+
+		// Resuming works even once the event is gone, as long as the hook is paused.
+		wp_clear_scheduled_hook( self::HOOK );
+		$resumed = $this->ability( 'wp-crontrol/resume-hook' )->execute( array( 'hook' => self::HOOK ) );
+		self::assertIsArray( $resumed );
+		self::assertArrayNotHasKey( self::HOOK, (array) get_option( \Crontrol\PAUSED_OPTION ) );
+	}
+
+	public function testPauseAndResumeAreIdempotent(): void {
+		$this->admin();
+
+		$pause  = $this->ability( 'wp-crontrol/pause-hook' );
+		$resume = $this->ability( 'wp-crontrol/resume-hook' );
+
+		self::assertIsArray( $pause->execute( array( 'hook' => self::HOOK ) ) );
+		self::assertIsArray( $pause->execute( array( 'hook' => self::HOOK ) ) );
+		self::assertIsArray( $resume->execute( array( 'hook' => self::HOOK ) ) );
+		self::assertIsArray( $resume->execute( array( 'hook' => self::HOOK ) ) );
+		self::assertArrayNotHasKey( self::HOOK, (array) get_option( \Crontrol\PAUSED_OPTION ) );
+	}
+
+	public function testMaintenanceHooksCannotBeLogged(): void {
+		$this->admin();
+
+		$result = $this->ability( 'wp-crontrol/set-hook-logging' )->execute(
+			array(
+				'hook'    => 'crontrol/maintenance',
+				'enabled' => true,
+			)
+		);
+
+		self::assertWPError( $result );
+		self::assertSame( array(), Log::get_enabled_hooks() );
+	}
+
+	public function testLoggerHooksAndUnscheduledHooksCannotBeLogged(): void {
+		$this->admin();
+
+		foreach ( array( 'crontrol/run_finished', 'crontrol_not_scheduled_anywhere' ) as $hook ) {
+			$result = $this->ability( 'wp-crontrol/set-hook-logging' )->execute(
+				array(
+					'hook'    => $hook,
+					'enabled' => true,
+				)
+			);
+			self::assertWPError( $result, $hook );
+		}
+
+		// Even if the setting is written directly, the logger never observes its own hooks.
+		update_option( 'crontrol_log', array( 'crontrol/run_finished', self::HOOK ), true );
+		self::assertSame( array( self::HOOK ), Log::get_enabled_hooks() );
+	}
+
+	public function testLoggingCanBeToggled(): void {
+		$this->admin();
+
+		$on = $this->ability( 'wp-crontrol/set-hook-logging' )->execute(
+			array(
+				'hook'    => self::HOOK,
+				'enabled' => true,
+			)
+		);
+		self::assertIsArray( $on );
+		self::assertTrue( $on['logged'] );
+
+		$off = $this->ability( 'wp-crontrol/set-hook-logging' )->execute(
+			array(
+				'hook'    => self::HOOK,
+				'enabled' => false,
+			)
+		);
+		self::assertIsArray( $off );
+		self::assertFalse( $off['logged'] );
+	}
+
+	public function testLogsReportAnUpgradeRatherThanLoggingOff(): void {
+		$this->admin();
+		update_option( 'crontrol_log', array( self::HOOK ), true );
+
+		// Simulate the window after an update, before the log tables have been upgraded.
+		$option  = 'crontrol_event_logs_version';
+		$version = get_site_option( $option );
+		update_site_option( $option, 0 );
+
+		try {
+			$logs     = $this->ability( 'wp-crontrol/list-logs' )->execute( array() );
+			$insights = $this->ability( 'wp-crontrol/get-insights' )->execute( array() );
+		} finally {
+			update_site_option( $option, $version );
+		}
+
+		self::assertIsArray( $logs );
+		self::assertTrue( $logs['logging_enabled'] );
+		self::assertSame( array( self::HOOK ), $logs['logged_hooks'] );
+		self::assertStringContainsString( 'upgraded', $logs['message'] );
+		self::assertIsArray( $insights );
+		self::assertTrue( $insights['logging_enabled'] );
+	}
+
+	public function testGetLogReportsUnknownIDs(): void {
+		$this->admin();
+
+		self::assertWPError( $this->ability( 'wp-crontrol/get-log' )->execute( array( 'id' => 999999 ) ) );
+	}
+
+	public function testEventsWithObjectArgumentsAreListed(): void {
+		$this->admin();
+		wp_schedule_single_event( time() + HOUR_IN_SECONDS, 'crontrol_ability_object_args', array( (object) array( 'job_id' => 123 ) ) );
+
+		$result = $this->ability( 'wp-crontrol/list-events' )->execute( array( 'search' => 'crontrol_ability_object_args' ) );
+
+		wp_clear_scheduled_hook( 'crontrol_ability_object_args', array( (object) array( 'job_id' => 123 ) ) );
+
+		self::assertIsArray( $result );
+		self::assertSame( 1, $result['total'] );
+		self::assertSame( 'crontrol_ability_object_args', $result['events'][0]['label'] );
+	}
+
+	public function testMalformedEventsDoNotBreakTheList(): void {
+		$this->admin();
+
+		// An event whose schedule has since disappeared.
+		$add_schedule = static fn ( array $schedules ): array => $schedules + array(
+			'crontrol_gone' => array(
+				'interval' => 600,
+				'display'  => 'Gone',
+			),
+		);
+		add_filter( 'cron_schedules', $add_schedule );
+		wp_schedule_event( time() + HOUR_IN_SECONDS, 'crontrol_gone', 'crontrol_ability_gone_schedule' );
+		remove_filter( 'cron_schedules', $add_schedule );
+
+		// PHP and URL events whose stored arguments aren't arrays.
+		$malformed = array(
+			array( (object) array( 'code' => 'x' ) ),
+			array( 'not-an-array' ),
+		);
+
+		foreach ( $malformed as $args ) {
+			wp_schedule_single_event( time() + HOUR_IN_SECONDS + wp_rand( 1, 999 ), PHPCronEvent::HOOK_NAME, $args );
+			wp_schedule_single_event( time() + HOUR_IN_SECONDS + wp_rand( 1, 999 ), URLCronEvent::HOOK_NAME, $args );
+		}
+
+		$result = $this->ability( 'wp-crontrol/list-events' )->execute( array( 'per_page' => 200 ) );
+
+		wp_clear_scheduled_hook( 'crontrol_ability_gone_schedule' );
+		wp_clear_scheduled_hook( URLCronEvent::HOOK_NAME, array( (object) array( 'code' => 'x' ) ) );
+		wp_clear_scheduled_hook( URLCronEvent::HOOK_NAME, array( 'not-an-array' ) );
+
+		self::assertIsArray( $result );
+
+		$by_hook = array();
+		foreach ( $result['events'] as $event ) {
+			$by_hook[ $event['hook'] ][] = $event;
+		}
+
+		self::assertTrue( $by_hook['crontrol_ability_gone_schedule'][0]['schedule_missing'] );
+		self::assertCount( 2, $by_hook[ PHPCronEvent::HOOK_NAME ] );
+		self::assertCount( 2, $by_hook[ URLCronEvent::HOOK_NAME ] );
+
+		foreach ( array_merge( $by_hook[ PHPCronEvent::HOOK_NAME ], $by_hook[ URLCronEvent::HOOK_NAME ] ) as $event ) {
+			self::assertTrue( $event['has_error'] );
+
+			$run = $this->ability( 'wp-crontrol/run-event' )->execute(
+				array(
+					'hook' => $event['hook'],
+					'sig'  => $event['sig'],
+				)
+			);
+			self::assertWPError( $run );
+		}
+	}
+
+	public function testInsightsTotalsCoverEveryHook(): void {
+		$this->admin();
+		\Crontrol\Pro\init_db();
+		\Crontrol\Pro\EventRunModel::truncate();
+
+		for ( $i = 0; $i < 52; $i++ ) {
+			$run           = \Crontrol\Pro\EventRun::start( 'crontrol_insights_hook_' . $i, '', time(), array() );
+			$run->status   = \Crontrol\Pro\EventRun::STATUS_COMPLETED;
+			$run->duration = 'crontrol_insights_hook_51' === 'crontrol_insights_hook_' . $i ? 9000 : 10;
+			\Crontrol\Pro\EventRunModel::create( $run );
+		}
+
+		$result = $this->ability( 'wp-crontrol/get-insights' )->execute();
+		\Crontrol\Pro\EventRunModel::truncate();
+
+		self::assertIsArray( $result );
+		self::assertSame( 52, $result['runs'] );
+		self::assertSame( 52, $result['hook_count'] );
+		self::assertCount( 50, $result['hooks'] );
+		self::assertTrue( $result['hooks_truncated'] );
+		self::assertSame( 'crontrol_insights_hook_51', $result['slowest_hooks'][0] );
+	}
+
+	public function testListSchedulesReturnsCoreSchedules(): void {
+		$this->admin();
+
+		$result = $this->ability( 'wp-crontrol/list-schedules' )->execute();
+
+		self::assertIsArray( $result );
+		self::assertContains( 'hourly', wp_list_pluck( $result['schedules'], 'name' ) );
+	}
+
+	public function testReadonlyAnnotations(): void {
+		self::assertTrue( $this->ability( 'wp-crontrol/list-events' )->get_meta()['annotations']['readonly'] );
+		self::assertTrue( $this->ability( 'wp-crontrol/run-event' )->get_meta()['annotations']['destructive'] );
+		self::assertFalse( $this->ability( 'wp-crontrol/run-event' )->get_meta()['annotations']['readonly'] );
+	}
+}
